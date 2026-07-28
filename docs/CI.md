@@ -21,6 +21,8 @@ What it does:
 2. Runs [`scripts/update_benchmarks.py`](../scripts/update_benchmarks.py) (public HTTP only — **no** Fireworks / OpenAI / Anthropic / AA API keys)
 3. If `config/benchmarks.yaml` changed, opens a PR titled `chore: monthly benchmark refresh (YYYY-MM)` via `peter-evans/create-pull-request` and `GITHUB_TOKEN`
 
+**Repo setting required:** Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**. Without that, the scrape still runs and pushes a branch, but PR creation fails (open the PR manually from the branch).
+
 ### Run locally
 
 ```bash
