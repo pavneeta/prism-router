@@ -11,3 +11,7 @@ dist/
 build/
 .DS_Store
 .cursor/
+
+website/.vercel/
+website/.hallmark/
+.tmp-hallmark/
