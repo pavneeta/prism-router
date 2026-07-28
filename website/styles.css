@@ -438,6 +438,83 @@ a:focus-visible {
   transform: translateY(0);
 }
 
+/* ── Compact how (value + mechanism balance) ─────────────────── */
+.how-compact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.how-compact > li {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: var(--space-md);
+  padding: var(--space-lg) 0;
+  border-top: var(--rule-hair) solid var(--color-rule);
+}
+
+.how-compact > li:last-child {
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+
+.how-compact__n {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-accent);
+  padding-top: 0.2rem;
+}
+
+.how-compact__title {
+  margin: 0 0 var(--space-xs);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink);
+  line-height: var(--leading-tight);
+}
+
+.how-compact__body {
+  margin: 0;
+  max-width: var(--measure);
+  color: var(--color-ink-2);
+  font-size: var(--text-md);
+}
+
+.bench-line {
+  margin: var(--space-xl) 0 0;
+  max-width: 48rem;
+  font-size: var(--text-md);
+  color: var(--color-ink-2);
+  line-height: var(--leading-body);
+}
+
+.bench-line strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.bench-line a {
+  margin-left: 0.35em;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.section-h .inline-code {
+  font-size: 0.9em;
+}
+
 /* ── How it works · F4 steps ────────────────────────────────── */
 .steps {
   list-style: none;
