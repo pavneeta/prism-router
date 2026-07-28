@@ -35,3 +35,7 @@ session_affinity_ttl_seconds: 1800
 cache_switch_savings_margin: 0.15
 default_cache_hit_ratio: 0.7
 prefer_caching_models_above_prefix_tokens: 1024
+
+# Fireworks: suppress chain-of-thought / thinking in visible content
+# (reasoning_effort=none + thinking.type=disabled). Set false to allow CoT.
+fireworks_hide_thinking: true

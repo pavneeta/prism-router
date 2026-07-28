@@ -17,4 +17,4 @@ Live gateway A/B from this project session (cache-busted). Re-run:
 | Chat UX | **Anthropic** | Less CoT dump at low max_tokens |
 | Router `auto` | Not Anthropic | DeepSeek / gpt-4o-mini when floors allow |
 
-Implication for Prism Router: keep Fireworks OSS models enabled for cost; use Anthropic when floors require higher intelligence or chat quality.
+Implication for Prism Router: keep Fireworks OSS models enabled for cost; use Anthropic when floors require higher intelligence or chat quality. Fireworks CoT dumps are suppressed by default via `fireworks_hide_thinking` (`reasoning_effort=none` / `thinking.type=disabled`) — see [USAGE.md](USAGE.md).

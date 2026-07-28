@@ -607,6 +607,7 @@ async def chat_completions(
         tools=body.tools,
         supports_prompt_caching=supports_caching and policy_cfg.prompt_cache_enabled,
         session_id=x_session_id,
+        fireworks_hide_thinking=policy_cfg.fireworks_hide_thinking,
     )
     kwargs = _completion_kwargs(body)
     kwargs.update(cache_extra)

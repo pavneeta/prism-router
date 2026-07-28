@@ -42,6 +42,8 @@ class PolicyConfig(BaseModel):
     default_cache_hit_ratio: float = 0.7
     # Prefer caching-capable models when estimated prefix is at least this many tokens
     prefer_caching_models_above_prefix_tokens: int = 1024
+    # Fireworks reasoning models: disable visible thinking / CoT in content
+    fireworks_hide_thinking: bool = True
 
     def min_accuracy(self, task_type: str) -> float:
         return self.min_accuracy_by_task.get(task_type, self.default_min_accuracy)

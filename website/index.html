@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Prism Router — Intelligence-aware, cache-aware AI model routing</title>
-  <meta name="description" content="Prism Router (Model-Router) classifies each request, picks the cheapest model that clears an intelligence floor, and keeps sessions sticky so prompt caches stay warm. Open source LiteLLM gateway." />
+  <meta name="description" content="Prism Router classifies each turn, picks the cheapest model that clears an intelligence floor, keeps sessions sticky for prompt cache, and speaks OpenAI chat completions plus Anthropic messages. Open source LiteLLM gateway." />
   <meta name="theme-color" content="#0a1418" />
   <meta property="og:title" content="Prism Router" />
   <meta property="og:description" content="Intelligence-aware, cache-aware inference routing for agent harnesses." />
@@ -43,7 +43,7 @@
             Route by <span class="mark">intelligence</span>, not habit.
           </h1>
           <p class="hero__lede">
-            Drop-in OpenAI-compatible gateway that classifies each turn, picks the cheapest model that still clears an intelligence floor, and keeps multi-turn sessions sticky so prompt caches stay warm.
+            Drop-in OpenAI- and Anthropic-compatible gateway that classifies each turn, picks the cheapest model that still clears an intelligence floor, and keeps multi-turn sessions sticky so prompt caches stay warm.
           </p>
           <div class="hero__cta">
             <a class="btn btn--primary" href="https://github.com/pavneeta/prism-router">
@@ -127,9 +127,9 @@
             <div>
               <h3 class="step__title">Classify the turn.</h3>
               <p class="step__body">
-                Heuristic classifier maps the messages to a task type — code generation, review, tool-use agent, reasoning, summarization, chat — with confidence. Optional LLM classify only when needed.
+                Heuristic classifier maps the messages to a task type — code generation, review, tool-use agent, reasoning, summarization, chat — with confidence. With <code>X-Session-Id</code>, weak follow-ups hold the session task until a confident drift.
               </p>
-              <p class="step__meta">Target p99 &lt; 20–50 ms · heuristic path</p>
+              <p class="step__meta">Target p99 &lt; 20–50 ms · session task memory</p>
             </div>
           </li>
           <li class="step reveal">
@@ -149,7 +149,7 @@
               <p class="step__body">
                 Among eligible models, pick the lowest effective $/request — counting cached vs cold token rates, not list price alone. North star: lower $/task completion without giving up accuracy or turn latency.
               </p>
-              <p class="step__meta">model-router/auto · OpenAI-compatible API</p>
+              <p class="step__meta">model-router/auto · OpenAI + Anthropic Messages APIs</p>
             </div>
           </li>
           <li class="step reveal">
@@ -231,6 +231,10 @@
               <strong>Provider cache hints</strong>
               <p>When supported, the gateway enables provider prompt-cache flags via LiteLLM.</p>
             </li>
+            <li>
+              <strong>Session rollups</strong>
+              <p>Inspect tokens, $, and cache savings with <code>GET /v1/router/sessions/{id}</code>.</p>
+            </li>
           </ul>
 
           <div class="code-panel reveal" aria-label="Example chat completions request">
@@ -256,7 +260,7 @@
           <p class="section-eyebrow"><span class="num tnum">04</span> · Harnesses</p>
           <h2 class="section-h" id="harness-h">Point OpenCode or Hermes at :4000.</h2>
           <p class="section-lede">
-            Provider keys live on the gateway. Clients only need an OpenAI-compatible base URL and model id <code>auto</code>.
+            Provider keys live on the gateway. Clients need an OpenAI-compatible base URL (or Anthropic <code>/v1/messages</code>) and model id <code>auto</code>.
           </p>
         </header>
 
@@ -325,6 +329,8 @@
               <a href="https://github.com/pavneeta/prism-router/blob/main/docs/USAGE.md">Usage</a>
               <a href="https://github.com/pavneeta/prism-router/blob/main/docs/ARCHITECTURE.md">Architecture</a>
               <a href="https://github.com/pavneeta/prism-router/blob/main/docs/BENCHMARKS.md">Benchmarks</a>
+              <a href="https://github.com/pavneeta/prism-router/blob/main/docs/CI.md">CI / release</a>
+              <a href="https://github.com/pavneeta/prism-router/blob/main/docs/SECURITY.md">Security</a>
               <a href="https://github.com/pavneeta/prism-router/blob/main/docs/TROUBLESHOOTING.md">Troubleshooting</a>
               <a href="https://github.com/pavneeta/prism-router/blob/main/README.md">README</a>
             </nav>
@@ -340,6 +346,7 @@
         <div class="foot-stmt__links">
           <a href="https://github.com/pavneeta/prism-router">GitHub</a>
           <a href="https://github.com/pavneeta/prism-router/blob/main/docs/USAGE.md">Docs</a>
+          <a href="https://prism-router-ten.vercel.app">Site</a>
           <a href="https://github.com/pavneeta/prism-router/blob/main/LICENSE">License</a>
         </div>
       </div>

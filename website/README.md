@@ -23,9 +23,13 @@ python3 -m http.server 5173
 
 ## Deploy (Vercel)
 
+Production: [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
+
 ```bash
 cd website
 npx vercel --prod
 ```
 
-`vercel.json` configures a static deploy from this directory.
+Root Directory for the Vercel project is `website`. `vercel.json` configures a static deploy from this directory.
+
+Optional GitHub Pages: `.github/workflows/deploy-website.yml` (enable Pages → GitHub Actions in repo settings).
