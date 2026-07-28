@@ -95,7 +95,9 @@ opencode
 
 In the TUI, confirm the model is **model-router/auto** (`/models` if needed).
 
-## Curl stand-in (what OpenCode sends)
+## Streaming note
+
+OpenCode defaults to `stream: true`. Model-Router now returns OpenAI-compatible SSE (including synthetic dry-run chunks). Project config also sets `"streaming": false` so OpenCode can use non-stream requests when the option is respected.
 
 OpenCode’s OpenAI-compatible adapter POSTs to `/v1/chat/completions` with model id `auto` (provider prefix stripped):
 
