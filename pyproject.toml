@@ -37,5 +37,5 @@ redirects = { "model_router" = "src/model_router" }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]

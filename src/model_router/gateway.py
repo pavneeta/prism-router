@@ -18,6 +18,7 @@ from model_router.config import get_selection_policy, get_settings, load_policy
 from model_router.litellm_backend import acompletion, apply_provider_cache_hints, completion_cost
 from model_router.policy import RoutingDecision, estimate_input_tokens
 from model_router.prompt_cache import get_prompt_cache
+from model_router.sessions import apply_session_classification, get_session_store
 from model_router.telemetry import TelemetryEvent, TelemetryLogger, now_ts
 
 load_dotenv()
@@ -100,10 +101,15 @@ def _route(
     """Returns classification, decision (if auto), and litellm model to call."""
     policy_cfg = load_policy()
     cache = get_prompt_cache()
-    classification = classify_messages(
+    sessions = get_session_store()
+    turn = classify_messages(
         [m.model_dump() for m in messages],
         tools=tools,
     )
+    prior = sessions.get_task(session_id)
+    classification = apply_session_classification(turn, prior=prior)
+    sessions.set_task(session_id, classification)
+
     if requested_model in policy_cfg.auto_model_ids:
         affinity = cache.get_affinity(session_id) if policy_cfg.prompt_cache_enabled else None
         decision = get_selection_policy().select(
@@ -195,6 +201,20 @@ def _emit(
             sticky_model=decision.sticky_model if decision else None,
         )
     )
+    get_session_store().record_event(
+        session_id=session_id,
+        task_type=classification.task_type,
+        selected_model=selected_model,
+        latency_ms=latency_ms,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        estimated_cost_usd=decision.estimated_cost_usd if decision else 0.0,
+        actual_cost_usd=actual_cost_usd,
+        frontier_cost_usd=decision.frontier_cost_usd if decision else 0.0,
+        cost_delta_vs_frontier_usd=decision.cost_delta_vs_frontier_usd if decision else 0.0,
+        cache_hit=cache_hit,
+        estimated_cached_tokens=decision.estimated_cached_tokens if decision else 0,
+    )
 
 
 def _router_meta(
@@ -249,6 +269,124 @@ def _completion_kwargs(body: ChatCompletionRequest) -> dict[str, Any]:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/v1/router/sessions/{session_id}")
+async def session_rollup(session_id: str) -> dict[str, Any]:
+    """Per-session telemetry rollup (tokens, $, cache hits, task mix)."""
+    rollup = get_session_store().get_rollup(session_id)
+    task = get_session_store().get_task(session_id)
+    if rollup is None and task is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    return {
+        "session_id": session_id,
+        "task": (
+            {
+                "task_type": task.task_type,
+                "confidence": task.confidence,
+                "turns": task.turns,
+            }
+            if task
+            else None
+        ),
+        "rollup": rollup.to_dict() if rollup else None,
+    }
+
+
+class AnthropicMessageBlock(BaseModel):
+    type: str = "text"
+    text: str = ""
+
+
+class AnthropicMessagesRequest(BaseModel):
+    model: str
+    messages: list[dict[str, Any]]
+    max_tokens: int = 1024
+    system: str | list[dict[str, Any]] | None = None
+    temperature: float | None = None
+    stream: bool = False
+    tools: list[dict[str, Any]] | None = None
+
+
+def _anthropic_to_chat_messages(body: AnthropicMessagesRequest) -> list[ChatMessage]:
+    out: list[ChatMessage] = []
+    if body.system:
+        if isinstance(body.system, str):
+            out.append(ChatMessage(role="system", content=body.system))
+        elif isinstance(body.system, list):
+            text = " ".join(
+                str(b.get("text", "")) for b in body.system if isinstance(b, dict)
+            )
+            out.append(ChatMessage(role="system", content=text))
+    for msg in body.messages:
+        role = str(msg.get("role", "user"))
+        content = msg.get("content", "")
+        if isinstance(content, list):
+            text = " ".join(
+                str(b.get("text", "")) for b in content if isinstance(b, dict)
+            )
+            out.append(ChatMessage(role=role, content=text))
+        else:
+            out.append(ChatMessage(role=role, content=content))
+    return out
+
+
+@app.post("/v1/messages")
+async def anthropic_messages(
+    body: AnthropicMessagesRequest,
+    request: Request,
+    x_session_id: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None, alias="x-api-key"),
+) -> JSONResponse:
+    """Anthropic Messages API compatibility (non-streaming MVP)."""
+    _ = x_api_key  # accepted for client compatibility; gateway uses .env providers
+    if body.stream:
+        raise HTTPException(
+            status_code=400,
+            detail="streaming /v1/messages not implemented; use /v1/chat/completions?stream=true",
+        )
+
+    chat_messages = _anthropic_to_chat_messages(body)
+    # Map Anthropic-style model aliases to router auto when requested
+    requested = body.model
+    policy_cfg = load_policy()
+    if requested in policy_cfg.auto_model_ids or requested.endswith("/auto"):
+        requested = "model-router/auto"
+
+    chat_body = ChatCompletionRequest(
+        model=requested,
+        messages=chat_messages,
+        temperature=body.temperature,
+        max_tokens=body.max_tokens,
+        stream=False,
+        tools=body.tools,
+    )
+    # Reuse chat completions path logic via internal call
+    response = await chat_completions(chat_body, request, x_session_id)
+    # chat_completions returns JSONResponse — convert to Anthropic shape
+    payload = json.loads(bytes(response.body).decode("utf-8"))
+    if response.status_code >= 400:
+        return response
+
+    content_text = ""
+    choices = payload.get("choices") or []
+    if choices:
+        content_text = str((choices[0].get("message") or {}).get("content") or "")
+    usage = payload.get("usage") or {}
+    anthropic_payload = {
+        "id": payload.get("id") or f"msg_{uuid.uuid4().hex[:24]}",
+        "type": "message",
+        "role": "assistant",
+        "model": payload.get("model") or requested,
+        "content": [{"type": "text", "text": content_text}],
+        "stop_reason": "end_turn",
+        "usage": {
+            "input_tokens": usage.get("prompt_tokens") or 0,
+            "output_tokens": usage.get("completion_tokens") or 0,
+        },
+        "model_router": payload.get("model_router"),
+    }
+    return JSONResponse(anthropic_payload)
 
 
 @app.post("/v1/router/explain")

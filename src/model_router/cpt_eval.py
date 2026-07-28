@@ -19,7 +19,9 @@ CHEAP_PREFIXES = (
     "deepseek/",
     "zai/",
     "openai/gpt-5.6-luna",
+    "openai/gpt-4o-mini",
     "moonshot/",
+    "minimax/",
 )
 
 

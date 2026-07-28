@@ -1,123 +1,147 @@
-# Model-Router
+# Prism Router (Model-Router)
 
-Intelligence-aware **cache-aware** AI inference router: pick the right model for each task using benchmarks to minimize **$/task completion** without sacrificing intelligence or accuracy — including prompt-cache savings across turns.
+**Intelligence-aware, cache-aware inference routing** for agent harnesses and high-volume multi-task workloads.
 
-Built on **Python + LiteLLM** (OpenAI-compatible gateway). Model-Router decides *which* model; LiteLLM calls the provider.
+Prism Router sits in front of your model providers (via [LiteLLM](https://github.com/BerriAI/litellm)). It classifies each request, picks the cheapest model that still clears an **intelligence floor** for that task, and keeps multi-turn sessions sticky so **prompt caches** stay warm.
 
-## Status
+> **North-star metric:** lower **$/task completion** without giving up accuracy, intelligence, or turn latency.
 
-- Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- Benchmark provenance: [docs/BENCHMARKS.md](docs/BENCHMARKS.md)
-- Requirements: [Model router requirements.md](Model%20router%20requirements.md)
-- MVP scaffold: classifier, **multi-source public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Artificial Analysis, Arena), intelligence-floor policy, prompt caching, JSONL telemetry
+Repo: [github.com/pavneeta/prism-router](https://github.com/pavneeta/prism-router)
+
+**Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
+
+---
+
+## Why this exists
+
+Teams move to open or mid-tier models to cut spend, then either:
+
+- overspend on frontier models for every turn, or  
+- under-provision and lose task accuracy on hard coding / agent work.
+
+Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Artificial Analysis, Arena) plus **cache-aware cost** so you route by *task*, not by habit.
+
+---
+
+## Features
+
+| Capability | What you get |
+| --- | --- |
+| Task-aware routing | Heuristic classifier → intelligence floor → min effective $ |
+| Benchmark seed | DeepSWE / SWE-bench / Terminal-Bench / AA / Arena ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)) |
+| Cache-aware | Local exact cache, session affinity (`X-Session-Id`), provider cache hints |
+| Drop-in API | OpenAI `POST /v1/chat/completions` (+ streaming) and Anthropic `POST /v1/messages` |
+| Providers | Fireworks, OpenAI, Anthropic, and anything LiteLLM supports |
+| Harness-friendly | Works with OpenCode, Hermes, and any OpenAI-compatible client |
+| Sessions | `X-Session-Id` task memory + `GET /v1/router/sessions/{id}` rollups |
+
+---
 
 ## Quick start
 
 ```bash
-cd Model-Router
+git clone https://github.com/pavneeta/prism-router.git
+cd prism-router   # or Model-Router
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
-# Optional: add OPENAI_API_KEY (or other provider keys) to .env
+# Add provider keys to .env (see below)
 ```
 
-### Dry-run (no provider calls)
+### Run the gateway
 
 ```bash
-export MODEL_ROUTER_DRY_RUN=true
+# Live (calls providers)
 model-router
-# or: uvicorn model_router.gateway:app --host 0.0.0.0 --port 4000
+# → http://127.0.0.1:4000
+
+# Dry-run (routing only, no provider spend)
+MODEL_ROUTER_DRY_RUN=true model-router
 ```
 
-### Explain a routing decision
-
-```bash
-curl -s http://127.0.0.1:4000/v1/router/explain \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "model-router/auto",
-    "messages": [{"role":"user","content":"Write a Python function to merge two sorted lists."}]
-  }' | python -m json.tool
-```
-
-### Chat completions (auto-route + session affinity)
-
-Send `X-Session-Id` so multi-turn agent loops stick to the same model and keep provider prompt caches warm:
+### First request
 
 ```bash
 curl -s http://127.0.0.1:4000/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -H 'X-Session-Id: agent-session-1' \
+  -H 'X-Session-Id: demo-1' \
   -d '{
     "model": "model-router/auto",
-    "temperature": 0,
-    "messages": [{"role":"user","content":"Hello — keep it short."}]
+    "messages": [{"role": "user", "content": "Write a Python hello world."}]
   }' | python -m json.tool
 ```
 
-Point any OpenAI SDK at the gateway:
+Use model id `model-router/auto` or `auto`. Responses include a `model_router` block with classification and the selected model.
 
-```python
-from openai import OpenAI
+---
 
-client = OpenAI(base_url="http://127.0.0.1:4000/v1", api_key="unused")
-client.chat.completions.create(
-    model="model-router/auto",
-    messages=[{"role": "user", "content": "Summarize: ..."}],
-    extra_headers={"X-Session-Id": "agent-session-1"},
-)
-```
+## Documentation
 
-## How routing works
+| Doc | Contents |
+| --- | --- |
+| **[Usage guide](docs/USAGE.md)** | Install, config, API, routing, caching, telemetry |
+| **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common errors and fixes |
+| **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
+| **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |
+| [Architecture](docs/ARCHITECTURE.md) | System design |
+| [Benchmarks](docs/BENCHMARKS.md) | Score provenance and task mapping |
+| [CI](docs/CI.md) | Pytest CI, monthly benchmarks, GHCR release |
+| [Security](docs/SECURITY.md) | Key rotation and secret handling |
+| [A/B notes](docs/AB_ANTHROPIC_VS_FIREWORKS.md) | Anthropic vs Fireworks session snapshot |
 
-1. **Local prompt cache** — exact-match lookup **before** classify/route for deterministic retries (`temperature` 0/omitted; skipped when `stream=true`). TTLs come from [config/policy.yaml](config/policy.yaml).
-2. **Classify** the request into a task type (`code_generation`, `general_chat`, …). Tools present is a signal (not a hard override) so harness coding turns still route as code.
-3. **Filter** enabled models whose **derived** accuracy for that task clears the intelligence floor ([config/policy.yaml](config/policy.yaml)). Accuracies come from DeepSWE / SWE-bench / Terminal-Bench / AA / Arena ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).
-4. **Pick** lowest **effective** $/request among eligible models, pricing **cached vs uncached** tokens and preferring **session affinity** when it preserves provider prompt-cache savings ([config/benchmarks.yaml](config/benchmarks.yaml)).
-5. **Call** via LiteLLM (supports `stream=true` SSE); inject provider cache hints when the model supports prompt caching; update affinity + local cache; log tokens, $, cache layer, and Δ$ vs frontier to `logs/telemetry.jsonl`.
+---
 
-Enable OSS deployments in [config/models.yaml](config/models.yaml) once you have provider API keys.
+## Provider keys (gateway-side)
 
-### Streaming
+Put keys in **`.env`** (gitignored). Never commit them. Never put them in harness config if the gateway already holds them. If a key was ever pasted into chat, **rotate it** ([SECURITY.md](docs/SECURITY.md)).
 
 ```bash
-curl -N http://127.0.0.1:4000/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"model-router/auto","stream":true,"messages":[{"role":"user","content":"Hi"}]}'
+FIREWORKS_API_KEY=...
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+MODEL_ROUTER_DRY_RUN=false
 ```
+
+Enable deployments in [`config/models.yaml`](config/models.yaml). Intelligence floors and cache knobs live in [`config/policy.yaml`](config/policy.yaml).
+
+---
+
+## Harness examples (one-liners)
+
+**OpenCode** — project [`opencode.json`](opencode.json) already points at `http://127.0.0.1:4000/v1` with model `model-router/auto`. See [docs/OPENCODE.md](docs/OPENCODE.md).
+
+**Hermes** — in `~/.hermes/config.yaml`:
+
+```yaml
+model:
+  default: auto
+  provider: custom
+  base_url: http://127.0.0.1:4000/v1
+  api_key: unused
+```
+
+See [docs/HERMES.md](docs/HERMES.md).
+
+---
 
 ## Tests
 
 ```bash
 pytest
-# Offline CPT-style routing distribution (no network):
 python scripts/cpt_routing_eval.py
 ```
 
-## Layout
-
-```text
-docs/ARCHITECTURE.md
-config/                 # policy, benchmarks (+ cache rates), deployments
-src/model_router/       # gateway, classifier, cache-aware policy, prompt_cache, telemetry
-tests/
-```
-
-## Roadmap (post-MVP)
-
-- Anthropic Messages compatibility + native `cache_control` passthrough
-- Prefix / semantic local prompt cache
-- Tiny learned classifier + session awareness
-- Online anonymized benchmark updates from harness ticks
-- Cloud multi-replica gateway + shared affinity/cache store
-- First-class harness adapters (Hermes, open-code, …)
-
 ## Benchmark refresh (CI)
 
-Monthly GitHub Action refreshes `config/benchmarks.yaml` from public leaderboards and opens a PR. No provider API keys. See [docs/CI.md](docs/CI.md).
+Monthly GitHub Action refreshes [`config/benchmarks.yaml`](config/benchmarks.yaml) from public leaderboards (DeepSWE JSON where available) and opens a PR. No provider API keys. See [docs/CI.md](docs/CI.md).
 
 ```bash
 python scripts/update_benchmarks.py --dry-run -v
 ```
 
+---
+
+## License
+
+See the repository `LICENSE` file.

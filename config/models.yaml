@@ -1,7 +1,9 @@
 # Deployments Model-Router may select. Enable rows you have credentials for.
 # Ids must match keys in benchmarks.yaml.
+# Fireworks via LiteLLM: fireworks_ai/accounts/fireworks/models/<id>
+# (FIREWORKS_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY in .env — never commit .env)
 deployments:
-  # Frontier / high intelligence
+  # Frontier / high intelligence (OpenAI + Anthropic)
   - id: openai/gpt-5.6-sol
     litellm_model: openai/gpt-5.6-sol
     enabled: true
@@ -22,40 +24,41 @@ deployments:
     litellm_model: openai/gpt-5.6-luna
     enabled: true
 
-  # Open-weight / cost leaders
+  # Open-weight / cost leaders on Fireworks serverless
   - id: moonshot/kimi-k3
-    litellm_model: moonshot/kimi-k3
+    litellm_model: fireworks_ai/accounts/fireworks/models/kimi-k3
     enabled: true
 
   - id: zai/glm-5.2
-    litellm_model: openai/glm-5.2  # remap to your provider's LiteLLM id
+    litellm_model: fireworks_ai/accounts/fireworks/models/glm-5p2
     enabled: true
 
   - id: deepseek/deepseek-v4-pro
-    litellm_model: deepseek/deepseek-chat
+    litellm_model: fireworks_ai/accounts/fireworks/models/deepseek-v4-pro
     enabled: true
 
   - id: minimax/minimax-m3
-    litellm_model: minimax/minimax-m3
-    enabled: false
+    litellm_model: fireworks_ai/accounts/fireworks/models/minimax-m3
+    enabled: true
 
+  # Llama 4 / 3.3 — remap when available on your account
   - id: meta-llama/llama-4-maverick
-    litellm_model: together_ai/meta-llama/Llama-4-Maverick-Instruct
+    litellm_model: fireworks_ai/accounts/fireworks/models/llama4-maverick-instruct-basic
     enabled: false
 
   - id: meta-llama/llama-4-scout
-    litellm_model: together_ai/meta-llama/Llama-4-Scout-Instruct
+    litellm_model: fireworks_ai/accounts/fireworks/models/llama4-scout-instruct-basic
     enabled: false
 
   - id: meta-llama/llama-3.3-70b-instruct
-    litellm_model: groq/llama-3.3-70b-versatile
+    litellm_model: fireworks_ai/accounts/fireworks/models/llama-v3p3-70b-instruct
     enabled: false
 
-  # Legacy
+  # Legacy OpenAI
   - id: openai/gpt-4o
     litellm_model: openai/gpt-4o
-    enabled: false
+    enabled: true
 
   - id: openai/gpt-4o-mini
     litellm_model: openai/gpt-4o-mini
-    enabled: false
+    enabled: true

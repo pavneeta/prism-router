@@ -1,0 +1,16 @@
+.venv
+.git
+.github
+.env
+logs
+**/__pycache__
+**/*.pyc
+.pytest_cache
+website
+.tmp-hallmark
+*.md
+!README.md
+tests
+scripts
+docs
+opencode.json

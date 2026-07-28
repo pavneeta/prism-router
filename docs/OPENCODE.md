@@ -1,19 +1,31 @@
-# OpenCode ↔ Model-Router
+# Use with OpenCode
 
-Point OpenCode at the local Model-Router gateway so chat completions use intelligence-aware routing (`model-router/auto`).
+Point [OpenCode](https://opencode.ai) at Prism Router so agent turns go through intelligence-aware, cache-aware routing.
+
+## Architecture
+
+```text
+OpenCode  --OpenAI-compatible-->  Prism Router (:4000/v1)  --LiteLLM-->  Providers
+                                  model: auto
+                                  X-Session-Id
+```
+
+Provider API keys live on the **gateway** (`.env`), not in OpenCode.
 
 ## Prerequisites
 
-1. Model-Router running (dry-run or live):
+1. Prism Router running locally (or reachable URL):
 
 ```bash
-cd Model-Router
+cd prism-router   # or Model-Router
 source .venv/bin/activate
-export MODEL_ROUTER_DRY_RUN=true   # omit / set false when provider API keys are in .env
-model-router                       # http://0.0.0.0:4000
+# Live:
+model-router
+# Or dry-run while wiring:
+# MODEL_ROUTER_DRY_RUN=true model-router
 ```
 
-2. OpenCode installed (any one):
+2. OpenCode installed:
 
 ```bash
 brew install anomalyco/tap/opencode
@@ -21,20 +33,20 @@ brew install anomalyco/tap/opencode
 # or: npm i -g opencode-ai
 ```
 
-## Project config (preferred)
+Confirm: `opencode --version`
 
-This repo includes [`opencode.json`](../opencode.json) at the project root. OpenCode loads project config when you run it from this directory.
+## Project config (recommended)
+
+This repository ships [`opencode.json`](../opencode.json) at the project root. OpenCode loads it when you start OpenCode **from that directory**.
 
 | Setting | Value |
 | --- | --- |
 | Provider id | `model-router` |
-| Model picker id | `model-router/auto` |
-| API `model` field sent | `auto` (accepted by gateway `auto_model_ids`) |
+| Model id in UI | `model-router/auto` |
+| API `model` field | often `auto` (prefix stripped; gateway accepts it) |
 | `baseURL` | `http://127.0.0.1:4000/v1` |
-| Session header | `X-Session-Id: opencode-local` (affinity / prompt-cache stickiness) |
-| `streaming` | `false` (OpenCode usually streams; MVP also accepts `stream:true` via SSE replay) |
-
-Contents:
+| `X-Session-Id` | `opencode-local` (session affinity) |
+| `apiKey` | `unused` (gateway does not need a real OpenCode-side key) |
 
 ```json
 {
@@ -62,44 +74,52 @@ Contents:
 }
 ```
 
+Copy this file into any other repo where you want the same wiring, and adjust `baseURL` if the gateway is remote.
+
 ## Optional global config
 
-Only if you want this provider outside this repo. **Back up first** if `~/.config/opencode/opencode.json` already exists:
+To use Prism Router outside this repo, merge the `provider.model-router` block into `~/.config/opencode/opencode.json`. **Back up first:**
 
 ```bash
 mkdir -p ~/.config/opencode
 cp ~/.config/opencode/opencode.json ~/.config/opencode/opencode.json.bak.$(date +%Y%m%d) 2>/dev/null || true
-# merge the provider block above into ~/.config/opencode/opencode.json
 ```
 
-Do not silently overwrite an existing global file; merge the `provider.model-router` block.
+Do not overwrite an existing global file blindly.
 
-## Auth note
+## Auth
 
-`apiKey` is set to `"unused"` in project config because the local gateway does not require a real key in dry-run. For live mode, keys belong on the **gateway** side (`.env` / LiteLLM), not in OpenCode.
+If OpenCode prompts for credentials:
 
-If OpenCode still prompts for provider auth, run `opencode auth login`, choose **Other**, pick `model-router`, and enter any non-empty key (e.g. `unused`).
+```bash
+opencode auth login
+# Other → model-router → enter any non-empty key (e.g. unused)
+```
+
+Live OpenAI / Anthropic / Fireworks keys stay in the **gateway** `.env`.
 
 ## Run
 
 ```bash
-# terminal 1 — gateway
-cd Model-Router && source .venv/bin/activate && MODEL_ROUTER_DRY_RUN=true model-router
+# Terminal 1 — gateway
+cd prism-router && source .venv/bin/activate && model-router
 
-# terminal 2 — OpenCode from this project
-cd Model-Router
+# Terminal 2 — OpenCode (from project with opencode.json)
+cd prism-router
 opencode
-# or non-interactive smoke (if your build supports it):
-# opencode run "Say hi in one sentence." --model model-router/auto
 ```
 
-In the TUI, confirm the model is **model-router/auto** (`/models` if needed).
+In the TUI, confirm model **model-router/auto** (`/models` if needed).
 
-## Streaming note
+Non-interactive smoke (if your OpenCode build supports it):
 
-OpenCode defaults to `stream: true`. Model-Router now returns OpenAI-compatible SSE (including synthetic dry-run chunks). Project config also sets `"streaming": false` so OpenCode can use non-stream requests when the option is respected.
+```bash
+opencode run "Reply with exactly: pong" -m model-router/auto --auto
+```
 
-OpenCode’s OpenAI-compatible adapter POSTs to `/v1/chat/completions` with model id `auto` (provider prefix stripped):
+## Verify without OpenCode
+
+Simulate what OpenCode sends:
 
 ```bash
 curl -s http://127.0.0.1:4000/v1/chat/completions \
@@ -108,14 +128,22 @@ curl -s http://127.0.0.1:4000/v1/chat/completions \
   -d '{
     "model": "auto",
     "temperature": 0,
-    "messages": [{"role":"user","content":"Hello from OpenCode."}]
-  }' | python3 -m json.tool
+    "messages": [{"role": "user", "content": "Hello from OpenCode."}]
+  }' | python -m json.tool
 ```
 
-## Stop gateway
+Check `model_router.decision.selected_model` and the assistant content.
 
-```bash
-# if started in foreground: Ctrl-C
-# if you know the port:
-lsof -ti :4000 | xargs kill
-```
+## Streaming
+
+OpenCode often uses `stream: true`. Prism Router speaks OpenAI-compatible SSE. Project config sets `"streaming": false` when you prefer non-stream requests; either mode is supported by the gateway.
+
+## Tips for agent sessions
+
+- Keep a **stable** `X-Session-Id` per OpenCode workspace/session so affinity preserves provider prompt caches.  
+- Prefer `temperature: 0` for cacheable retries.  
+- Use `/v1/router/explain` while tuning prompts and floors.  
+
+## Troubleshooting
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#opencode-cannot-reach-the-gateway).

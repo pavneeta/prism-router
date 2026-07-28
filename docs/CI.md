@@ -1,5 +1,11 @@
 # CI / automation
 
+## Pytest (every PR / push to `main`)
+
+Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+
+Runs `pip install -e ".[dev]"`, `pytest -q`, and `scripts/cpt_routing_eval.py`.
+
 ## Monthly benchmark refresh
 
 Workflow: [`.github/workflows/update-benchmarks.yml`](../.github/workflows/update-benchmarks.yml)
@@ -29,10 +35,21 @@ python scripts/update_benchmarks.py --summary logs/benchmark_update_summary.md -
 
 | Source | Status |
 | --- | --- |
-| DeepSWE | Live JSON from `deepswe.datacurve.ai/artifacts/.../leaderboard-live.json` |
-| SWE-bench Verified | Stub (no stable public JSON mapped) |
-| Terminal-Bench v2.1 | Stub (tbench / AA HTML only today) |
-| AA Intelligence Index | Stub (AA API requires a key — not used in CI) |
-| Arena Elo | Stub (no stable unauthenticated JSON) |
+| DeepSWE | Live JSON from `deepswe.datacurve.ai` |
+| Arena Elo | Community API (`api.wulong.dev`) + HF datasets-server mirror |
+| SWE-bench Verified | Best-effort public JSON mirrors (skip if unmapped) |
+| Terminal-Bench | Best-effort public JSON mirrors (skip if unmapped) |
+| AA Intelligence Index | Best-effort public endpoints (often auth-gated → skip) |
 
 Unavailable sources are skipped; partial updates and a bumped `snapshot_date` are OK. See [BENCHMARKS.md](BENCHMARKS.md).
+
+## Docker release (GHCR)
+
+Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml)
+
+On `v*` tags (or manual dispatch), builds the [`Dockerfile`](../Dockerfile) and pushes to `ghcr.io/<owner>/<repo>:$tag` and `:latest`.
+
+## Website
+
+- Production: [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) (Vercel project `prism-router`, Root Directory `website`)
+- Optional GitHub Pages: [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) (enable Pages → GitHub Actions in repo settings)

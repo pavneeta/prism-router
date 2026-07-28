@@ -190,56 +190,340 @@ def fetch_deepswe() -> SourceResult:
 
 
 def fetch_aa_intelligence_index() -> SourceResult:
-    """TODO: Artificial Analysis public JSON requires an API key (401 without it).
-
-    Do not put AA_API_KEY (or any provider key) in this workflow. When a free
-    public dump appears, parse Intelligence Index here and return scores keyed
-    by catalog model id.
-    """
+    """Best-effort AA-like composites from public endpoints (skip if auth required)."""
+    urls = [
+        "https://artificialanalysis.ai/api/models",
+        "https://artificialanalysis.ai/data/llms.json",
+        "https://cdn.artificialanalysis.ai/data/llms.json",
+    ]
+    for url in urls:
+        try:
+            payload = _http_get_json(url)
+            scores = _parse_aa_payload(payload)
+            if scores:
+                return SourceResult(
+                    "aa_intelligence_index",
+                    True,
+                    f"parsed {len(scores)} scores from {url}",
+                    scores=scores,
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.info("AA fetch failed (%s): %s", url, exc)
     return SourceResult(
         "aa_intelligence_index",
         False,
-        "stub: Artificial Analysis API requires a key; skip (no secrets in CI)",
+        "skip: Artificial Analysis API requires a key or public mirror unavailable",
     )
+
+
+def _parse_aa_payload(payload: Any) -> dict[str, float]:
+    aliases = {
+        "claude-opus-5": "anthropic/claude-opus-5",
+        "claude opus 5": "anthropic/claude-opus-5",
+        "claude-sonnet-5": "anthropic/claude-sonnet-5",
+        "gpt-5.6-sol": "openai/gpt-5.6-sol",
+        "gpt-5.6 sol": "openai/gpt-5.6-sol",
+        "kimi-k3": "moonshot/kimi-k3",
+        "kimi k3": "moonshot/kimi-k3",
+        "glm-5.2": "zai/glm-5.2",
+        "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
+        "deepseek v4 pro": "deepseek/deepseek-v4-pro",
+    }
+    if isinstance(payload, dict):
+        rows = payload.get("models") or payload.get("data") or payload.get("results") or []
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        return {}
+    out: dict[str, float] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name") or row.get("slug") or row.get("model") or "").lower()
+        idx = row.get("intelligence_index") or row.get("aa_intelligence_index") or row.get("index")
+        if idx is None:
+            continue
+        for key, catalog_id in aliases.items():
+            if key in name:
+                out[catalog_id] = float(idx)
+                break
+    return out
 
 
 def fetch_arena_elo() -> SourceResult:
-    """TODO: LMArena / Arena Elo leaderboard has no stable unauthenticated JSON.
+    """Fetch Arena text Elo from public community JSON / HF datasets (no auth)."""
+    urls = [
+        "https://api.wulong.dev/arena-ai-leaderboards/v1/leaderboard?name=text",
+        "https://raw.githubusercontent.com/oolong-tea-2026/arena-ai-leaderboards/main/data/latest.json",
+        # Hugging Face datasets-server rows for lmarena text leaderboard
+        "https://datasets-server.huggingface.co/rows?dataset=lmarena-ai/leaderboard-dataset&config=text&split=latest&offset=0&length=100",
+    ]
+    last_err = "no URL"
+    for url in urls:
+        try:
+            payload = _http_get_json(url)
+            if isinstance(payload, dict) and "models" not in payload:
+                text_url = payload.get("text") or (payload.get("paths") or {}).get("text")
+                if isinstance(text_url, str) and text_url.startswith("http"):
+                    payload = _http_get_json(text_url)
+                elif isinstance(text_url, str):
+                    base = "https://raw.githubusercontent.com/oolong-tea-2026/arena-ai-leaderboards/main/"
+                    payload = _http_get_json(base + text_url.lstrip("/"))
+            scores = _parse_arena_payload(payload)
+            if scores:
+                return SourceResult(
+                    "arena_elo",
+                    True,
+                    f"parsed {len(scores)} Elo scores from {url}",
+                    scores=scores,
+                )
+            last_err = f"no mapped models in payload from {url}"
+        except Exception as exc:  # noqa: BLE001
+            last_err = str(exc)
+            logger.info("Arena fetch failed (%s): %s", url, exc)
+    return SourceResult("arena_elo", False, f"skip: {last_err}")
 
-    Prior attempts (lmarena.ai/api, Hugging Face space resolve) return 403/401.
-    When a public CSV/JSON mirror exists, map text Elo into arena_elo scores.
-    """
-    return SourceResult(
-        "arena_elo",
-        False,
-        "stub: Arena/LMArena has no stable public JSON without auth; skip",
-    )
+
+def _parse_arena_payload(payload: Any) -> dict[str, float]:
+    aliases = {
+        "claude-opus-5": "anthropic/claude-opus-5",
+        "claude opus 5": "anthropic/claude-opus-5",
+        "claude-sonnet-5": "anthropic/claude-sonnet-5",
+        "claude sonnet 5": "anthropic/claude-sonnet-5",
+        "gpt-5.6-sol": "openai/gpt-5.6-sol",
+        "gpt-5.6 sol": "openai/gpt-5.6-sol",
+        "gpt-4o-mini": "openai/gpt-4o-mini",
+        "gpt-4o": "openai/gpt-4o",
+        "kimi-k3": "moonshot/kimi-k3",
+        "kimi k3": "moonshot/kimi-k3",
+        "glm-5.2": "zai/glm-5.2",
+        "deepseek": "deepseek/deepseek-v4-pro",
+    }
+    if isinstance(payload, dict):
+        # HF datasets-server: {"rows":[{"row":{...}}, ...]}
+        if "rows" in payload and isinstance(payload["rows"], list):
+            models = []
+            for item in payload["rows"]:
+                if isinstance(item, dict) and isinstance(item.get("row"), dict):
+                    row = item["row"]
+                    # Prefer overall category when present
+                    cat = str(row.get("category") or "overall").lower()
+                    if cat not in ("overall", "text", ""):
+                        continue
+                    models.append(
+                        {
+                            "model": row.get("model_name") or row.get("model"),
+                            "score": row.get("rating") or row.get("score"),
+                        }
+                    )
+        else:
+            models = payload.get("models") or payload.get("data") or []
+    elif isinstance(payload, list):
+        models = payload
+    else:
+        return {}
+    out: dict[str, float] = {}
+    for row in models:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("model") or row.get("name") or row.get("model_name") or "").lower()
+        score = row.get("score") or row.get("elo") or row.get("rating")
+        if score is None:
+            continue
+        for key, catalog_id in aliases.items():
+            if key in name and catalog_id not in out:
+                out[catalog_id] = float(score)
+                break
+    return out
 
 
 def fetch_swe_bench_verified() -> SourceResult:
-    """TODO: SWE-bench Verified official tables are HTML / harness-sensitive.
+    """Best-effort SWE-bench Verified from public JSON mirrors / GitHub experiments."""
+    urls = [
+        "https://raw.githubusercontent.com/SWE-bench/experiments/main/evaluation/verified/docs/index.json",
+        "https://raw.githubusercontent.com/SWE-bench/experiments/main/docs/index.json",
+        "https://www.swebench.com/api/verified.json",
+        "https://raw.githubusercontent.com/princeton-nlp/SWE-bench/main/docs/results.json",
+    ]
+    last_err = "no URL"
+    for url in urls:
+        try:
+            payload = _http_get_json(url)
+            scores = _parse_swe_payload(payload)
+            if scores:
+                return SourceResult(
+                    "swe_bench_verified",
+                    True,
+                    f"parsed {len(scores)} scores from {url}",
+                    scores=scores,
+                )
+            last_err = f"unmapped payload from {url}"
+        except Exception as exc:  # noqa: BLE001
+            last_err = str(exc)
+            logger.info("SWE-bench fetch failed (%s): %s", url, exc)
 
-    Prefer manual curation (see docs/BENCHMARKS.md harness caveat) until a
-    stable public JSON of mini-swe-agent / official rows is available.
-    """
+    # Fall back: scan recent verified experiment folders on GitHub for results.json
+    try:
+        listing = _http_get_json(
+            "https://api.github.com/repos/SWE-bench/experiments/contents/evaluation/verified"
+        )
+        if isinstance(listing, list):
+            scores: dict[str, float] = {}
+            for entry in listing[-40:]:  # newest-ish tail of alpha-sorted list
+                if not isinstance(entry, dict) or entry.get("type") != "dir":
+                    continue
+                name = str(entry.get("name") or "").lower()
+                if not any(
+                    k in name
+                    for k in ("claude", "gpt", "deepseek", "kimi", "glm", "opus", "sonnet")
+                ):
+                    continue
+                path = entry.get("path")
+                if not path:
+                    continue
+                try:
+                    results = _http_get_json(
+                        f"https://raw.githubusercontent.com/SWE-bench/experiments/main/{path}/results.json"
+                    )
+                except Exception:  # noqa: BLE001
+                    continue
+                parsed = _parse_swe_payload(results if isinstance(results, list) else {"results": [results] if isinstance(results, dict) else results})
+                # Also accept resolved_instances / total style
+                if not parsed and isinstance(results, dict):
+                    resolved = results.get("resolved_instances") or results.get("resolved")
+                    total = results.get("total_instances") or results.get("total")
+                    if resolved is not None and total:
+                        fake = {"model": name, "resolved": float(resolved) / float(total)}
+                        parsed = _parse_swe_payload({"results": [fake]})
+                    elif isinstance(resolved, (int, float)) and float(resolved) <= 1.0:
+                        parsed = _parse_swe_payload(
+                            {"results": [{"model": name, "resolved": float(resolved)}]}
+                        )
+                for mid, val in parsed.items():
+                    scores[mid] = max(scores.get(mid, 0.0), val)
+            if scores:
+                return SourceResult(
+                    "swe_bench_verified",
+                    True,
+                    f"parsed {len(scores)} scores from SWE-bench experiments tree",
+                    scores=scores,
+                )
+            last_err = "no mapped models in SWE-bench experiments tree"
+    except Exception as exc:  # noqa: BLE001
+        last_err = str(exc)
+        logger.info("SWE-bench GitHub scan failed: %s", exc)
+
     return SourceResult(
         "swe_bench_verified",
         False,
-        "stub: no stable public SWE-bench Verified JSON mapped yet; skip",
+        f"skip: no stable public SWE-bench Verified JSON ({last_err})",
     )
+
+
+def _parse_swe_payload(payload: Any) -> dict[str, float]:
+    aliases = {
+        "claude-opus-5": "anthropic/claude-opus-5",
+        "claude-opus-4": "anthropic/claude-opus-5",
+        "gpt-5.6": "openai/gpt-5.6-sol",
+        "gpt-4o": "openai/gpt-4o",
+        "deepseek": "deepseek/deepseek-v4-pro",
+        "kimi": "moonshot/kimi-k3",
+    }
+    if isinstance(payload, dict):
+        rows = payload.get("results") or payload.get("leaderboard") or payload.get("data") or []
+        if not rows and all(isinstance(v, (int, float)) for v in payload.values()):
+            rows = [{"model": k, "resolved": v} for k, v in payload.items()]
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        return {}
+    out: dict[str, float] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("model") or row.get("name") or row.get("system") or "").lower()
+        score = row.get("resolved") or row.get("score") or row.get("pass_rate")
+        if score is None:
+            continue
+        val = float(score)
+        if val > 1.0:
+            val = val / 100.0
+        for key, catalog_id in aliases.items():
+            if key in name and catalog_id not in out:
+                out[catalog_id] = round(val, 3)
+                break
+    return out
 
 
 def fetch_terminal_bench() -> SourceResult:
-    """TODO: Terminal-Bench v2.1 scores used here come from AA / tbench HTML.
-
-    tbench.ai does not currently expose a documented unauthenticated JSON API
-    that we can rely on in CI. Scaffold remains for a future public endpoint.
-    """
+    """Best-effort Terminal-Bench v2.1 from public mirrors / Harbor / tbench API."""
+    urls = [
+        "https://api.tbench.ai/v1/get_leaderboard?benchmark=terminal-bench&version=2.1",
+        "https://api.tbench.ai/v1/get_leaderboard?benchmark=terminal-bench-2&version=2.1",
+        "https://raw.githubusercontent.com/laude-institute/terminal-bench/main/leaderboard.json",
+        "https://raw.githubusercontent.com/laude-institute/terminal-bench/main/terminal_bench/leaderboard.json",
+        "https://www.tbench.ai/api/v2/leaderboard.json",
+        "https://www.tbench.ai/leaderboard.json",
+        "https://hub.harborframework.com/api/datasets/terminal-bench/terminal-bench-2-1/latest/leaderboard.json",
+    ]
+    last_err = "no URL"
+    for url in urls:
+        try:
+            payload = _http_get_json(url)
+            scores = _parse_terminal_payload(payload)
+            if scores:
+                return SourceResult(
+                    "terminal_bench_v2_1",
+                    True,
+                    f"parsed {len(scores)} scores from {url}",
+                    scores=scores,
+                )
+            last_err = f"unmapped payload from {url}"
+        except Exception as exc:  # noqa: BLE001
+            last_err = str(exc)
+            logger.info("Terminal-Bench fetch failed (%s): %s", url, exc)
     return SourceResult(
         "terminal_bench_v2_1",
         False,
-        "stub: Terminal-Bench public JSON not wired yet; skip",
+        f"skip: Terminal-Bench public JSON not available ({last_err})",
     )
+
+
+def _parse_terminal_payload(payload: Any) -> dict[str, float]:
+    aliases = {
+        "claude-opus-5": "anthropic/claude-opus-5",
+        "claude-sonnet-5": "anthropic/claude-sonnet-5",
+        "gpt-5.6-sol": "openai/gpt-5.6-sol",
+        "gpt-5.6-terra": "openai/gpt-5.6-terra",
+        "gpt-5.6-luna": "openai/gpt-5.6-luna",
+        "kimi-k3": "moonshot/kimi-k3",
+        "glm-5.2": "zai/glm-5.2",
+        "glm-5p2": "zai/glm-5.2",
+        "deepseek": "deepseek/deepseek-v4-pro",
+        "minimax": "minimax/minimax-m3",
+    }
+    if isinstance(payload, dict):
+        rows = payload.get("results") or payload.get("models") or payload.get("leaderboard") or []
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        return {}
+    out: dict[str, float] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("model") or row.get("name") or "").lower()
+        score = row.get("score") or row.get("pass_at_1") or row.get("accuracy")
+        if score is None:
+            continue
+        val = float(score)
+        if val > 1.0:
+            val = val / 100.0
+        for key, catalog_id in aliases.items():
+            if key in name and catalog_id not in out:
+                out[catalog_id] = round(val, 3)
+                break
+    return out
 
 
 def _format_source_value(value: Any) -> str:

@@ -104,8 +104,8 @@ def test_policy_chat_picks_cheapest_above_floor():
         classification_confidence=0.9,
         prompt_text="Hello, how are you?",
     )
-    # Among enabled models clearing chat floor, deepseek is cheapest
-    assert decision.selected_model == "deepseek/deepseek-v4-pro"
+    # Among enabled models clearing chat floor, gpt-4o-mini is cheapest
+    assert decision.selected_model == "openai/gpt-4o-mini"
     assert decision.reason == "min_effective_cost_above_intelligence_floor"
     assert decision.cost_delta_vs_frontier_usd < 0
 
@@ -159,10 +159,10 @@ def test_session_affinity_preserves_model():
         benchmarks=load_benchmarks(),
         models=load_models(),
     )
-    # Stick to deepseek (cheapest eligible chat model) — affinity should preserve it
+    # Stick to gpt-4o-mini (cheapest eligible chat model) — affinity should preserve it
     affinity = SessionAffinity(
-        model_id="deepseek/deepseek-v4-pro",
-        litellm_model="deepseek/deepseek-chat",
+        model_id="openai/gpt-4o-mini",
+        litellm_model="openai/gpt-4o-mini",
         prefix_tokens_estimate=2000,
         updated_at=0,
     )
@@ -172,7 +172,7 @@ def test_session_affinity_preserves_model():
         prompt_text="follow-up: tell me more " + ("x" * 8000),
         session_affinity=affinity,
     )
-    assert decision.selected_model == "deepseek/deepseek-v4-pro"
+    assert decision.selected_model == "openai/gpt-4o-mini"
     assert decision.reason == "session_affinity_preserve_prompt_cache"
 
 
@@ -249,7 +249,7 @@ def test_affinity_breaks_when_cold_wins_by_margin():
         prompt_text="Hello, how are you today?",
         session_affinity=affinity,
     )
-    assert decision.selected_model == "deepseek/deepseek-v4-pro"
+    assert decision.selected_model == "openai/gpt-4o-mini"
     assert decision.reason == "min_effective_cost_above_intelligence_floor"
     assert decision.selected_model != affinity.model_id
 
