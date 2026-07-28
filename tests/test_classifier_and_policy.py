@@ -68,14 +68,29 @@ def test_derive_accuracy_from_public_sources():
 
 
 def test_seed_benchmarks_include_leaderboard_models():
+    """Structure / provenance checks — avoid pinning exact leaderboard floats."""
+    import re
+
     benches = load_benchmarks()
-    assert benches.snapshot_date == "2026-07-25"
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", benches.snapshot_date or "")
     assert "moonshot/kimi-k3" in benches.models
-    kimi = benches.models["moonshot/kimi-k3"]
-    assert kimi.sources["deepswe"] == 0.685
-    assert kimi.accuracy["code_generation"] == 0.685
-    assert kimi.accuracy["tool_use_agent"] == 0.883
     assert "openai/gpt-5.6-sol" in benches.models
+    assert "anthropic/claude-opus-5" in benches.models
+
+    kimi = benches.models["moonshot/kimi-k3"]
+    assert "deepswe" in kimi.sources
+    assert "terminal_bench_v2_1" in kimi.sources
+    assert "aa_intelligence_index" in kimi.sources
+    assert 0.0 < float(kimi.sources["deepswe"]) <= 1.0
+    assert 0.0 < float(kimi.sources["terminal_bench_v2_1"]) <= 1.0
+    assert "code_generation" in kimi.accuracy
+    assert "tool_use_agent" in kimi.accuracy
+    assert kimi.accuracy["code_generation"] == float(kimi.sources["deepswe"])
+    assert kimi.accuracy["tool_use_agent"] == float(kimi.sources["terminal_bench_v2_1"])
+
+    for mid in ("openai/gpt-5.6-sol", "anthropic/claude-opus-5", "zai/glm-5.2"):
+        src = benches.models[mid].sources
+        assert any(k in src for k in ("deepswe", "swe_bench_verified", "terminal_bench_v2_1"))
 
 
 def test_policy_chat_picks_cheapest_above_floor():
