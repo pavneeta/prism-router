@@ -438,6 +438,63 @@ a:focus-visible {
   transform: translateY(0);
 }
 
+/* ── Value outcomes (not how-to) ─────────────────────────────── */
+.value-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.value-list > li {
+  padding: var(--space-xl) 0;
+  border-top: var(--rule-bold) solid var(--color-rule-strong);
+}
+
+.value-list > li:last-child {
+  border-bottom: var(--rule-bold) solid var(--color-rule-strong);
+}
+
+.value-list__title {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink);
+  line-height: var(--leading-tight);
+}
+
+.value-list__body {
+  margin: 0;
+  max-width: var(--measure);
+  color: var(--color-ink-2);
+  font-size: var(--text-md);
+}
+
+.for-line {
+  margin: 0;
+  max-width: 42rem;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink);
+}
+
+.for-line code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--color-accent);
+}
+
+.for-line strong {
+  color: var(--color-accent-2);
+  font-weight: 700;
+}
+
 /* ── How it works · F4 steps ────────────────────────────────── */
 .steps {
   list-style: none;

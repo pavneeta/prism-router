@@ -28,7 +28,7 @@
   const typed = document.getElementById("typed-line");
   if (!typed) return;
 
-  const full = '"model-router/auto"';
+  const full = "model-router";
   if (reduce) {
     typed.textContent = full;
     typed.classList.add("is-done");
