@@ -51,3 +51,11 @@ Re-pull leaderboards when:
 1. A frontier model ships
 2. DeepSWE / Terminal-Bench publish a new snapshot
 3. AA Intelligence Index version bumps
+
+### Automated monthly update
+
+GitHub Actions runs [`scripts/update_benchmarks.py`](../scripts/update_benchmarks.py) on a monthly cron (`0 6 1 * *` UTC) and on `workflow_dispatch`. Best-effort public scrapes (DeepSWE live JSON today; other sources stubbed until stable public endpoints exist) update matching rows in [`config/benchmarks.yaml`](../config/benchmarks.yaml) and open a PR. No provider API secrets are required. Details: [CI.md](CI.md).
+
+```bash
+python scripts/update_benchmarks.py --dry-run -v
+```
