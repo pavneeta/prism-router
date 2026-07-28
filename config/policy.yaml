@@ -1,0 +1,37 @@
+# Intelligence floors calibrated to real pass@1 / normalized public scores
+# (DeepSWE, SWE-bench, Terminal-Bench, AA Index, Arena). See docs/BENCHMARKS.md.
+default_min_accuracy: 0.55
+
+min_accuracy_by_task:
+  # DeepSWE/SWE pass rates — require mid-pack coding agents (clears Luna/Kimi; fails weak Llama)
+  code_generation: 0.55
+  code_review_debug: 0.55
+  # AA Index / 70
+  reasoning_math: 0.60
+  # Terminal-Bench v2.1
+  tool_use_agent: 0.70
+  summarization: 0.50
+  extraction_qa: 0.50
+  creative_writing: 0.50
+  general_chat: 0.45
+
+# Δ$ telemetry vs always-frontier
+frontier_model: openai/gpt-5.6-sol
+
+auto_model_ids:
+  - model-router/auto
+  - auto
+
+# Fallback when no eligible model clears the floor
+safe_fallback_model: openai/gpt-5.6-luna
+
+default_estimated_output_tokens: 512
+min_classification_confidence: 0.35
+
+# --- Prompt caching / cache-aware routing ---
+prompt_cache_enabled: true
+local_cache_ttl_seconds: 300
+session_affinity_ttl_seconds: 1800
+cache_switch_savings_margin: 0.15
+default_cache_hit_ratio: 0.7
+prefer_caching_models_above_prefix_tokens: 1024

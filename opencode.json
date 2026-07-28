@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "model-router/auto",
+  "provider": {
+    "model-router": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Model-Router",
+      "options": {
+        "baseURL": "http://127.0.0.1:4000/v1",
+        "apiKey": "unused",
+        "streaming": false,
+        "headers": {
+          "X-Session-Id": "opencode-local"
+        }
+      },
+      "models": {
+        "auto": {
+          "name": "Auto (cache-aware route)"
+        }
+      }
+    }
+  }
+}

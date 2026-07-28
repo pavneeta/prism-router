@@ -1,0 +1,202 @@
+# Initial intelligence seed from public leaderboards (see docs/BENCHMARKS.md).
+# snapshot: DeepSWE 2026-07-25; AA / Terminal-Bench / Arena ~2026-07
+schema_version: 1
+snapshot_date: "2026-07-25"
+sources_docs: docs/BENCHMARKS.md
+
+# Raw source keys (optional per model):
+#   deepswe                 — pass@1 [0,1]  DeepSWE v1.1 / mini-swe-agent
+#   swe_bench_verified      — % resolved [0,1] SWE-bench Verified
+#   terminal_bench_v2_1     — pass@1 [0,1] Terminal-Bench v2.1
+#   aa_intelligence_index   — Artificial Analysis Intelligence Index (raw, ~0-70)
+#   arena_elo               — Arena AI / LMArena text Elo (or coding Elo when noted)
+#
+# Task accuracies are derived on load unless overridden under `accuracy:`.
+
+models:
+  # --- Frontier baselines (Δ$ reference + high intelligence floor) ---
+  openai/gpt-5.6-sol:
+    context_window: 1100000
+    input_cost_per_m: 5.00
+    output_cost_per_m: 30.00
+    cached_input_cost_per_m: 2.50
+    supports_prompt_caching: true
+    p50_latency_ms: 1200
+    sources:
+      deepswe: 0.727
+      terminal_bench_v2_1: 0.895
+      aa_intelligence_index: 59
+      arena_elo: 1495
+    notes: "DeepSWE gpt-5.6-sol[max]; AA Sol(max); Terminal-Bench ~89.5% (AA)"
+
+  anthropic/claude-opus-5:
+    context_window: 1000000
+    input_cost_per_m: 5.00
+    output_cost_per_m: 25.00
+    cached_input_cost_per_m: 0.50
+    supports_prompt_caching: true
+    p50_latency_ms: 1400
+    sources:
+      deepswe: 0.736
+      swe_bench_verified: 0.886
+      terminal_bench_v2_1: 0.891
+      aa_intelligence_index: 61
+      arena_elo: 1512
+    notes: "DeepSWE claude-opus-5[max] 73.6%; AA Index leader 61; SWE-bench ~88.6% (Opus 4.8/5 class)"
+
+  anthropic/claude-sonnet-5:
+    context_window: 1000000
+    input_cost_per_m: 3.00
+    output_cost_per_m: 15.00
+    cached_input_cost_per_m: 0.30
+    supports_prompt_caching: true
+    p50_latency_ms: 900
+    sources:
+      deepswe: 0.538
+      terminal_bench_v2_1: 0.81
+      aa_intelligence_index: 52
+      arena_elo: 1470
+    notes: "DeepSWE claude-sonnet-5[max] 53.8%"
+
+  openai/gpt-5.6-terra:
+    context_window: 1100000
+    input_cost_per_m: 2.50
+    output_cost_per_m: 15.00
+    cached_input_cost_per_m: 1.25
+    supports_prompt_caching: true
+    p50_latency_ms: 900
+    sources:
+      deepswe: 0.696
+      terminal_bench_v2_1: 0.874
+      aa_intelligence_index: 55
+      arena_elo: 1480
+    notes: "DeepSWE gpt-5.6-terra[max]; strong cost/perf among closed models"
+
+  openai/gpt-5.6-luna:
+    context_window: 1100000
+    input_cost_per_m: 1.00
+    output_cost_per_m: 6.00
+    cached_input_cost_per_m: 0.50
+    supports_prompt_caching: true
+    p50_latency_ms: 700
+    sources:
+      deepswe: 0.672
+      terminal_bench_v2_1: 0.847
+      aa_intelligence_index: 50
+      arena_elo: 1465
+    notes: "DeepSWE gpt-5.6-luna[max]; cheaper OpenAI tier"
+
+  # --- Strong open-weight / low-cost (primary routing targets) ---
+  moonshot/kimi-k3:
+    context_window: 1048576
+    input_cost_per_m: 3.00
+    output_cost_per_m: 15.00
+    cached_input_cost_per_m: 1.50
+    supports_prompt_caching: true
+    p50_latency_ms: 1100
+    sources:
+      deepswe: 0.685
+      terminal_bench_v2_1: 0.883
+      aa_intelligence_index: 57
+      arena_elo: 1500
+    notes: "Top open-weight on AA (57); DeepSWE 68.5%; Arena Frontend Code #1 (~1679 coding Elo; text ~1500)"
+
+  zai/glm-5.2:
+    context_window: 1000000
+    input_cost_per_m: 0.95
+    output_cost_per_m: 3.00
+    supports_prompt_caching: false
+    p50_latency_ms: 500
+    sources:
+      deepswe: 0.438
+      terminal_bench_v2_1: 0.827
+      aa_intelligence_index: 51
+      arena_elo: 1471
+    notes: "DeepSWE glm-5.2[max] 43.8%; AA open-weight tier; strong Terminal-Bench relative to DeepSWE"
+
+  deepseek/deepseek-v4-pro:
+    context_window: 1000000
+    input_cost_per_m: 0.435
+    output_cost_per_m: 0.87
+    supports_prompt_caching: false
+    p50_latency_ms: 800
+    sources:
+      swe_bench_verified: 0.806
+      terminal_bench_v2_1: 0.65
+      aa_intelligence_index: 44
+      arena_elo: 1462
+    notes: "SWE-bench ~80.6% (VerdictPal/official class); AA DeepSeek V4 Pro(max)~44; TB~65%"
+
+  minimax/minimax-m3:
+    context_window: 1000000
+    input_cost_per_m: 0.30
+    output_cost_per_m: 1.20
+    supports_prompt_caching: false
+    p50_latency_ms: 600
+    sources:
+      terminal_bench_v2_1: 0.66
+      aa_intelligence_index: 44
+      arena_elo: 1450
+    notes: "AA open-weight tier with MiniMax-M3; Terminal-Bench ~66%"
+
+  meta-llama/llama-4-maverick:
+    context_window: 1000000
+    input_cost_per_m: 0.15
+    output_cost_per_m: 0.60
+    supports_prompt_caching: false
+    p50_latency_ms: 400
+    sources:
+      swe_bench_verified: 0.21
+      aa_intelligence_index: 14
+      arena_elo: 1380
+    notes: "AA Index 14; conservative SWE 21% (harness-sensitive — some tables much higher)"
+
+  meta-llama/llama-4-scout:
+    context_window: 10000000
+    input_cost_per_m: 0.08
+    output_cost_per_m: 0.30
+    supports_prompt_caching: false
+    p50_latency_ms: 300
+    sources:
+      swe_bench_verified: 0.091
+      aa_intelligence_index: 10
+      arena_elo: 1340
+    notes: "Cheapest long-context open option; weak coding/agent scores"
+
+  meta-llama/llama-3.3-70b-instruct:
+    context_window: 128000
+    input_cost_per_m: 0.59
+    output_cost_per_m: 0.79
+    supports_prompt_caching: false
+    p50_latency_ms: 200
+    sources:
+      aa_intelligence_index: 9
+      arena_elo: 1320
+    notes: "Legacy OSS via Groq/Together; AA Index ~9 — chat-only routing"
+
+  # --- Legacy OpenAI (kept for comparison / passthrough demos) ---
+  openai/gpt-4o:
+    context_window: 128000
+    input_cost_per_m: 2.50
+    output_cost_per_m: 10.00
+    cached_input_cost_per_m: 1.25
+    supports_prompt_caching: true
+    p50_latency_ms: 800
+    sources:
+      swe_bench_verified: 0.388
+      aa_intelligence_index: 35
+      arena_elo: 1395
+    notes: "Legacy; SWE-bench Verified ~38.8% (Mar 2025 class). Prefer gpt-5.6-* for frontier."
+
+  openai/gpt-4o-mini:
+    context_window: 128000
+    input_cost_per_m: 0.15
+    output_cost_per_m: 0.60
+    cached_input_cost_per_m: 0.075
+    supports_prompt_caching: true
+    p50_latency_ms: 450
+    sources:
+      swe_bench_verified: 0.24
+      aa_intelligence_index: 22
+      arena_elo: 1360
+    notes: "Legacy cheap OpenAI; weak vs 2026 coding/agent floors — useful for chat only"

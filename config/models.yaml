@@ -1,0 +1,61 @@
+# Deployments Model-Router may select. Enable rows you have credentials for.
+# Ids must match keys in benchmarks.yaml.
+deployments:
+  # Frontier / high intelligence
+  - id: openai/gpt-5.6-sol
+    litellm_model: openai/gpt-5.6-sol
+    enabled: true
+
+  - id: anthropic/claude-opus-5
+    litellm_model: anthropic/claude-opus-5
+    enabled: true
+
+  - id: anthropic/claude-sonnet-5
+    litellm_model: anthropic/claude-sonnet-5
+    enabled: true
+
+  - id: openai/gpt-5.6-terra
+    litellm_model: openai/gpt-5.6-terra
+    enabled: true
+
+  - id: openai/gpt-5.6-luna
+    litellm_model: openai/gpt-5.6-luna
+    enabled: true
+
+  # Open-weight / cost leaders
+  - id: moonshot/kimi-k3
+    litellm_model: moonshot/kimi-k3
+    enabled: true
+
+  - id: zai/glm-5.2
+    litellm_model: openai/glm-5.2  # remap to your provider's LiteLLM id
+    enabled: true
+
+  - id: deepseek/deepseek-v4-pro
+    litellm_model: deepseek/deepseek-chat
+    enabled: true
+
+  - id: minimax/minimax-m3
+    litellm_model: minimax/minimax-m3
+    enabled: false
+
+  - id: meta-llama/llama-4-maverick
+    litellm_model: together_ai/meta-llama/Llama-4-Maverick-Instruct
+    enabled: false
+
+  - id: meta-llama/llama-4-scout
+    litellm_model: together_ai/meta-llama/Llama-4-Scout-Instruct
+    enabled: false
+
+  - id: meta-llama/llama-3.3-70b-instruct
+    litellm_model: groq/llama-3.3-70b-versatile
+    enabled: false
+
+  # Legacy
+  - id: openai/gpt-4o
+    litellm_model: openai/gpt-4o
+    enabled: false
+
+  - id: openai/gpt-4o-mini
+    litellm_model: openai/gpt-4o-mini
+    enabled: false
