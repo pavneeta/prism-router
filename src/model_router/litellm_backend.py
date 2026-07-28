@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 from typing import Any
 
@@ -7,11 +8,22 @@ import litellm
 
 # Ignore provider-unsupported kwargs (e.g. Anthropic temperature quirks)
 litellm.drop_params = True
+litellm.num_retries = 0
+litellm.request_timeout = 60
 
 
 async def acompletion(*, model: str, messages: list[dict[str, Any]], **kwargs: Any) -> Any:
     """Thin LiteLLM wrapper — Model-Router owns selection; LiteLLM owns providers."""
-    return await litellm.acompletion(model=model, messages=messages, **kwargs)
+    # Bound provider waits so a hung upstream surfaces as 502 instead of stalling the gateway.
+    kwargs.setdefault("timeout", 60)
+    kwargs.setdefault("num_retries", 0)
+    try:
+        return await asyncio.wait_for(
+            litellm.acompletion(model=model, messages=messages, **kwargs),
+            timeout=75,
+        )
+    except asyncio.TimeoutError as exc:
+        raise TimeoutError(f"provider timed out for model={model}") from exc
 
 
 def completion_cost(response: Any) -> float | None:
@@ -81,8 +93,8 @@ def apply_provider_cache_hints(
       LiteLLM ``cache_control_injection_points`` as a belt-and-suspenders.
     - OpenAI family: optional ``prompt_cache_key`` (session sticky routing hint).
     - Fireworks: when ``fireworks_hide_thinking``, send
-      ``reasoning_effort="none"`` and ``thinking={"type":"disabled"}`` so CoT
-      is not dumped into visible ``content`` (Fireworks chat completions API).
+      ``thinking={"type":"disabled"}`` so CoT is not dumped into visible
+      ``content`` (Fireworks rejects combining this with ``reasoning_effort``).
     """
     msgs = copy.deepcopy(messages)
     tools_out = copy.deepcopy(tools) if tools else None
@@ -104,8 +116,7 @@ def apply_provider_cache_hints(
             extra["prompt_cache_key"] = session_id
 
     if fireworks_hide_thinking and _is_fireworks_family(model):
-        # Equivalent knobs per Fireworks docs; send both for wider model coverage.
-        extra["reasoning_effort"] = "none"
+        # Fireworks chat completions: only one of thinking / reasoning_effort.
         extra["thinking"] = {"type": "disabled"}
 
     return msgs, tools_out, extra

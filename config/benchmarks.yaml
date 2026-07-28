@@ -29,6 +29,20 @@ models:
       arena_elo: 1485
     notes: "DeepSWE gpt-5.6-sol[max]; AA Sol(max); Terminal-Bench ~89.5% (AA)"
 
+  anthropic/claude-fable-5:
+    context_window: 1000000
+    input_cost_per_m: 10.00
+    output_cost_per_m: 50.00
+    cached_input_cost_per_m: 1.00
+    supports_prompt_caching: true
+    p50_latency_ms: 1600
+    sources:
+      deepswe: 0.70
+      terminal_bench_v2_1: 0.846
+      aa_intelligence_index: 60
+      arena_elo: 1505
+    notes: "DeepSWE claude-fable-5[max] ~70%; Anthropic flagship ($10/$50); near-tie with Kimi on DeepSWE"
+
   anthropic/claude-opus-5:
     context_window: 1000000
     input_cost_per_m: 5.00
@@ -91,7 +105,7 @@ models:
     context_window: 1048576
     input_cost_per_m: 3.00
     output_cost_per_m: 15.00
-    cached_input_cost_per_m: 1.50
+    cached_input_cost_per_m: 0.30
     supports_prompt_caching: true
     p50_latency_ms: 1100
     sources:
@@ -99,45 +113,48 @@ models:
       terminal_bench_v2_1: 0.883
       aa_intelligence_index: 57
       arena_elo: 1486
-    notes: "Top open-weight on AA (57); DeepSWE 68.5%; Arena Frontend Code #1 (~1679 coding Elo; text ~1500)"
+    notes: "Fireworks Standard $3/$0.30/$15; DeepSWE 68.5% (~tie Fable); AA 57; Arena Frontend Code #1"
 
   zai/glm-5.2:
     context_window: 1000000
-    input_cost_per_m: 0.95
-    output_cost_per_m: 3.00
-    supports_prompt_caching: false
+    input_cost_per_m: 1.40
+    output_cost_per_m: 4.40
+    cached_input_cost_per_m: 0.14
+    supports_prompt_caching: true
     p50_latency_ms: 500
     sources:
       deepswe: 0.438
       terminal_bench_v2_1: 0.827
       aa_intelligence_index: 51
       arena_elo: 1471
-    notes: "DeepSWE glm-5.2[max] 43.8%; AA open-weight tier; strong Terminal-Bench relative to DeepSWE"
+    notes: "Fireworks Standard $1.40/$0.14/$4.40; DeepSWE 43.8% (below coding floor); strong TB"
 
   deepseek/deepseek-v4-pro:
     context_window: 1000000
-    input_cost_per_m: 0.435
-    output_cost_per_m: 0.87
-    supports_prompt_caching: false
+    input_cost_per_m: 1.74
+    output_cost_per_m: 3.48
+    cached_input_cost_per_m: 0.145
+    supports_prompt_caching: true
     p50_latency_ms: 800
     sources:
       swe_bench_verified: 0.806
       terminal_bench_v2_1: 0.65
       aa_intelligence_index: 44
       arena_elo: 1462
-    notes: "SWE-bench ~80.6% (VerdictPal/official class); AA DeepSeek V4 Pro(max)~44; TB~65%"
+    notes: "Fireworks Standard $1.74/$0.145/$3.48; SWE~80.6% (no DeepSWE → ineligible for code_generation); AA~44; TB~65%"
 
   minimax/minimax-m3:
     context_window: 1000000
     input_cost_per_m: 0.30
     output_cost_per_m: 1.20
-    supports_prompt_caching: false
+    cached_input_cost_per_m: 0.06
+    supports_prompt_caching: true
     p50_latency_ms: 600
     sources:
       terminal_bench_v2_1: 0.66
       aa_intelligence_index: 44
       arena_elo: 1450
-    notes: "AA open-weight tier with MiniMax-M3; Terminal-Bench ~66%"
+    notes: "Fireworks Standard $0.30/$0.06/$1.20; AA open-weight tier; Terminal-Bench ~66%"
 
   meta-llama/llama-4-maverick:
     context_window: 1000000

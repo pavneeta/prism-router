@@ -33,7 +33,10 @@ def client() -> TestClient:
 def test_health(client: TestClient):
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert "dry_run" in body
+    assert "providers" in body
 
 
 def test_dry_run_chat_completions(client: TestClient):

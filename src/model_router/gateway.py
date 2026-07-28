@@ -23,6 +23,29 @@ from model_router.telemetry import TelemetryEvent, TelemetryLogger, now_ts
 
 load_dotenv()
 
+
+def _clear_self_referential_provider_bases() -> None:
+    """Clients set OPENAI_API_BASE to this gateway; the gateway must hit real providers.
+
+    If those env vars leak into the gateway process, LiteLLM posts back to itself and hangs.
+    """
+    import os
+
+    markers = ("127.0.0.1:4000", "localhost:4000", "0.0.0.0:4000")
+    for var in (
+        "OPENAI_API_BASE",
+        "OPENAI_BASE_URL",
+        "ANTHROPIC_BASE_URL",
+        "ANTHROPIC_API_BASE",
+        "FIREWORKS_API_BASE",
+    ):
+        val = os.environ.get(var, "")
+        if any(m in val for m in markers):
+            os.environ.pop(var, None)
+
+
+_clear_self_referential_provider_bases()
+
 app = FastAPI(title="Model-Router", version="0.1.0")
 
 
@@ -132,7 +155,10 @@ def _route(
             likely_prefix_reuse=_likely_prefix_reuse(messages, tools),
         )
         return classification, decision, decision.litellm_model
-    return classification, None, requested_model
+    # Passthrough: remap catalog ids (e.g. moonshot/kimi-k3) to provider litellm ids.
+    deployment = get_selection_policy().enabled_deployment(requested_model)
+    litellm_model = deployment.litellm_model if deployment is not None else requested_model
+    return classification, None, litellm_model
 
 
 def _decision_payload(decision: RoutingDecision) -> dict[str, Any]:
@@ -267,7 +293,7 @@ def _update_affinity(
     )
 
 
-def _completion_kwargs(body: ChatCompletionRequest) -> dict[str, Any]:
+def _completion_kwargs(body: ChatCompletionRequest, litellm_model: str | None = None) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
     if body.temperature is not None:
         kwargs["temperature"] = body.temperature
@@ -275,12 +301,27 @@ def _completion_kwargs(body: ChatCompletionRequest) -> dict[str, Any]:
         kwargs["max_tokens"] = body.max_tokens
     if body.tool_choice is not None:
         kwargs["tool_choice"] = body.tool_choice
+    # Newer OpenAI GPT-5.* chat models only accept default temperature.
+    model = (litellm_model or body.model or "").lower()
+    if "gpt-5" in model:
+        kwargs.pop("temperature", None)
     return kwargs
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict[str, Any]:
+    import os
+
+    settings = get_settings()
+    return {
+        "status": "ok",
+        "dry_run": settings.model_router_dry_run,
+        "providers": {
+            "openai": bool(os.getenv("OPENAI_API_KEY")),
+            "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
+            "fireworks": bool(os.getenv("FIREWORKS_API_KEY")),
+        },
+    }
 
 
 @app.get("/v1/router/sessions/{session_id}")
@@ -621,7 +662,7 @@ async def chat_completions(
         session_id=x_session_id,
         fireworks_hide_thinking=policy_cfg.fireworks_hide_thinking,
     )
-    kwargs = _completion_kwargs(body)
+    kwargs = _completion_kwargs(body, litellm_model)
     kwargs.update(cache_extra)
 
     # --- Streaming path (skip local exact-cache) ---

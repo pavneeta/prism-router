@@ -22,12 +22,6 @@ def normalize_arena_elo(elo: float | None) -> float | None:
     return max(0.0, min(1.0, (float(elo) - ARENA_ELO_FLOOR) / ARENA_ELO_SPAN))
 
 
-def _mean(values: list[float]) -> float | None:
-    if not values:
-        return None
-    return sum(values) / len(values)
-
-
 def derive_task_accuracy(sources: dict[str, Any]) -> dict[str, float]:
     """Map public leaderboard metrics → router task accuracies in [0, 1]."""
     deepswe = sources.get("deepswe")
@@ -36,8 +30,10 @@ def derive_task_accuracy(sources: dict[str, Any]) -> dict[str, float]:
     aa_norm = normalize_aa_index(sources.get("aa_intelligence_index"))
     arena_norm = normalize_arena_elo(sources.get("arena_elo"))
 
-    code_vals = [float(v) for v in (deepswe, swe) if v is not None]
-    code_gen = _mean(code_vals)
+    # Prefer DeepSWE for codegen. Do not fall back to SWE-bench alone — that
+    # metric is more saturated and inflates models missing DeepSWE rows
+    # (e.g. DeepSeek V4 Pro) above Fable/Kimi peers.
+    code_gen = float(deepswe) if deepswe is not None else None
     code_debug = float(swe) if swe is not None else (float(deepswe) if deepswe is not None else None)
 
     chat_prior = arena_norm if arena_norm is not None else aa_norm

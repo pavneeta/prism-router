@@ -9,8 +9,8 @@ def test_fireworks_hide_thinking_adds_kwargs():
         supports_prompt_caching=False,
         fireworks_hide_thinking=True,
     )
-    assert extra["reasoning_effort"] == "none"
     assert extra["thinking"] == {"type": "disabled"}
+    assert "reasoning_effort" not in extra
 
 
 def test_fireworks_hide_thinking_can_be_disabled():
@@ -34,3 +34,4 @@ def test_non_fireworks_no_thinking_kwargs():
         fireworks_hide_thinking=True,
     )
     assert "reasoning_effort" not in extra
+    assert "thinking" not in extra

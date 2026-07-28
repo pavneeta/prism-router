@@ -8,6 +8,10 @@ deployments:
     litellm_model: openai/gpt-5.6-sol
     enabled: true
 
+  - id: anthropic/claude-fable-5
+    litellm_model: anthropic/claude-fable-5
+    enabled: true
+
   - id: anthropic/claude-opus-5
     litellm_model: anthropic/claude-opus-5
     enabled: true

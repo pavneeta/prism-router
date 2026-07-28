@@ -3,9 +3,9 @@
 default_min_accuracy: 0.55
 
 min_accuracy_by_task:
-  # DeepSWE/SWE pass rates — require mid-pack coding agents (clears Luna/Kimi; fails weak Llama)
-  code_generation: 0.55
-  code_review_debug: 0.55
+  # DeepSWE band for Fable/Kimi/Luna-class coding (excludes GLM 0.44, Sonnet 0.54)
+  code_generation: 0.65
+  code_review_debug: 0.65
   # AA Index / 70
   reasoning_math: 0.60
   # Terminal-Bench v2.1
@@ -40,5 +40,6 @@ default_cache_hit_ratio: 0.7
 prefer_caching_models_above_prefix_tokens: 1024
 
 # Fireworks: suppress chain-of-thought / thinking in visible content
-# (reasoning_effort=none + thinking.type=disabled). Set false to allow CoT.
+# (thinking.type=disabled only — Fireworks rejects combining with reasoning_effort).
+# Set false to allow CoT.
 fireworks_hide_thinking: true

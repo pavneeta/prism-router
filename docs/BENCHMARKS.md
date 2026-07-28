@@ -27,7 +27,7 @@ Computed in [`src/model_router/benchmarks.py`](../src/model_router/benchmarks.py
 
 | Task type | Formula |
 | --- | --- |
-| `code_generation` | mean of available(`deepswe`, `swe_bench_verified`) |
+| `code_generation` | **DeepSWE only** (SWE-bench alone is not used — too saturated / harness-skewed) |
 | `code_review_debug` | `swe_bench_verified` else `deepswe` |
 | `tool_use_agent` | `terminal_bench_v2_1` |
 | `reasoning_math` | AA normalized |
@@ -38,8 +38,10 @@ Missing sources are skipped (no silent zeros). Models with no score for a task a
 
 ## First-party stress calibration
 
-Use [`docs/STRESS_BENCH.md`](STRESS_BENCH.md) (`scripts/stress_bench.py`) to measure pass rates on 50 internal scenarios across OpenAI / Anthropic / OSS and feed floor reviews. Dry-run wiring summary: [`docs/stress_runs/20260728T144931Z_dry_summary.md`](stress_runs/20260728T144931Z_dry_summary.md).
+Use [`docs/STRESS_BENCH.md`](STRESS_BENCH.md) (`scripts/stress_bench.py`) to measure pass rates on 50 internal scenarios across OpenAI / Anthropic / OSS and feed floor reviews.
 
+- Dry-run wiring: [`docs/stress_runs/20260728T144931Z_dry_summary.md`](stress_runs/20260728T144931Z_dry_summary.md)
+- Live burn (router, 2026-07-28): [`docs/stress_runs/20260728T172948Z_summary.md`](stress_runs/20260728T172948Z_summary.md)
 
 SWE-bench and DeepSWE scores depend on agent harness + effort. Prefer **mini-swe-agent** / published DeepSWE rows for fair LM comparison. Third-party SWE tables can disagree sharply (e.g. Llama 4 Maverick) — we prefer official DeepSWE + AA + Terminal-Bench when present, and mark SWE rows with `note` when harness is unclear.
 

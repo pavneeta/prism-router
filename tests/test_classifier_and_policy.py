@@ -76,6 +76,8 @@ def test_seed_benchmarks_include_leaderboard_models():
     assert "moonshot/kimi-k3" in benches.models
     assert "openai/gpt-5.6-sol" in benches.models
     assert "anthropic/claude-opus-5" in benches.models
+    assert "anthropic/claude-fable-5" in benches.models
+    assert benches.models["anthropic/claude-fable-5"].sources.get("deepswe") == 0.70
 
     kimi = benches.models["moonshot/kimi-k3"]
     assert "deepswe" in kimi.sources
@@ -91,6 +93,15 @@ def test_seed_benchmarks_include_leaderboard_models():
     for mid in ("openai/gpt-5.6-sol", "anthropic/claude-opus-5", "zai/glm-5.2"):
         src = benches.models[mid].sources
         assert any(k in src for k in ("deepswe", "swe_bench_verified", "terminal_bench_v2_1"))
+
+
+def test_derive_accuracy_prefers_deepswe_for_codegen():
+    both = derive_task_accuracy({"deepswe": 0.685, "swe_bench_verified": 0.806})
+    assert both["code_generation"] == 0.685
+    assert both["code_review_debug"] == 0.806
+    swe_only = derive_task_accuracy({"swe_bench_verified": 0.806})
+    assert "code_generation" not in swe_only
+    assert swe_only["code_review_debug"] == 0.806
 
 
 def test_policy_chat_picks_cheapest_above_floor():
@@ -121,10 +132,14 @@ def test_policy_code_requires_strong_coding_scores():
         classification_confidence=0.9,
         prompt_text="Implement a binary search in Rust",
     )
-    # glm-5.2 DeepSWE 0.438 fails 0.55 floor; deepseek has SWE 0.806
-    assert decision.selected_model == "deepseek/deepseek-v4-pro"
+    # DeepSWE-only codegen + 0.65 floor: GLM 0.438 / Sonnet 0.538 / DeepSeek (no DeepSWE) out.
+    # Cheapest eligible with DeepSWE ≥ 0.65 is gpt-5.6-luna (0.672).
+    assert decision.selected_model == "openai/gpt-5.6-luna"
     assert "zai/glm-5.2" not in decision.eligible_models
+    assert "deepseek/deepseek-v4-pro" not in decision.eligible_models
     assert "moonshot/kimi-k3" in decision.eligible_models
+    assert "anthropic/claude-fable-5" in decision.eligible_models
+    assert decision.selected_accuracy >= 0.65
 
 
 def test_policy_tool_use_prefers_terminal_bench_eligible():
@@ -147,6 +162,7 @@ def test_policy_tool_use_prefers_terminal_bench_eligible():
         "openai/gpt-5.6-luna",
         "moonshot/kimi-k3",
         "openai/gpt-5.6-terra",
+        "anthropic/claude-fable-5",
         "anthropic/claude-sonnet-5",
         "openai/gpt-5.6-sol",
         "anthropic/claude-opus-5",

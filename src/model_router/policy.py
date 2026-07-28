@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from model_router.config import (
     BenchmarksConfig,
+    Deployment,
     ModelBenchmark,
     ModelsConfig,
     PolicyConfig,
@@ -64,6 +65,9 @@ class SelectionPolicy:
         self.benchmarks = benchmarks
         self.models = models
         self._enabled = {d.id: d for d in models.deployments if d.enabled}
+
+    def enabled_deployment(self, model_id: str) -> Deployment | None:
+        return self._enabled.get(model_id)
 
     def select(
         self,
