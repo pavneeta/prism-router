@@ -1,0 +1,18 @@
+# Snippet for HolmesGPT config / modelList (OpenAI-compatible → Prism Router)
+#
+# Env:
+#   export OPENAI_API_BASE=http://127.0.0.1:4000/v1
+#   export OPENAI_API_KEY=none
+#
+# CLI:
+#   holmes ask "what pods are failing?" --model=openai/auto
+
+modelList:
+  prism-auto:
+    api_key: "{{ env.OPENAI_API_KEY }}"
+    api_base: "{{ env.OPENAI_API_BASE }}"
+    model: openai/auto
+    temperature: 1
+
+config:
+  model: prism-auto

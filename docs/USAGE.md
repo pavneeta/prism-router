@@ -1,6 +1,6 @@
 # Usage guide
 
-Install, configure, and call **Prism Router**. See also [OPENCODE.md](OPENCODE.md), [HERMES.md](HERMES.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [SECURITY.md](SECURITY.md), [CI.md](CI.md).
+Install, configure, and call **Prism Router**. See also [OPENCODE.md](OPENCODE.md), [HERMES.md](HERMES.md), [HOLMESGPT.md](HOLMESGPT.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [SECURITY.md](SECURITY.md), [CI.md](CI.md).
 
 **Live marketing site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
 

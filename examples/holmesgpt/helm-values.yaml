@@ -1,0 +1,51 @@
+# HolmesGPT → Prism Router (Helm values)
+
+Use with the [Holmes Helm chart](https://holmesgpt.dev/latest/ai-providers/openai-compatible/).
+Point `OPENAI_API_BASE` at a reachable Prism Router Service.
+
+```yaml
+additionalEnvVars:
+  - name: OPENAI_API_BASE
+    # In-cluster example — adjust namespace / service name
+    value: "http://prism-router.default.svc.cluster.local:4000/v1"
+  - name: OPENAI_API_KEY
+    value: "none"
+    # If you front Prism with auth later:
+    # valueFrom:
+    #   secretKeyRef:
+    #     name: holmes-secrets
+    #     key: openai-api-key
+
+modelList:
+  prism-auto:
+    api_key: "{{ env.OPENAI_API_KEY }}"
+    api_base: "{{ env.OPENAI_API_BASE }}"
+    model: openai/auto
+    temperature: 1
+
+config:
+  model: "prism-auto"
+```
+
+### Robusta umbrella chart
+
+Nest the same structure under `holmes:`:
+
+```yaml
+holmes:
+  additionalEnvVars:
+    - name: OPENAI_API_BASE
+      value: "http://prism-router.default.svc.cluster.local:4000/v1"
+    - name: OPENAI_API_KEY
+      value: "none"
+  modelList:
+    prism-auto:
+      api_key: "{{ env.OPENAI_API_KEY }}"
+      api_base: "{{ env.OPENAI_API_BASE }}"
+      model: openai/auto
+      temperature: 1
+  config:
+    model: "prism-auto"
+```
+
+See [docs/HOLMESGPT.md](../../docs/HOLMESGPT.md).

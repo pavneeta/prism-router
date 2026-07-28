@@ -705,7 +705,7 @@ a:focus-visible {
 /* ── Harnesses ──────────────────────────────────────────────── */
 .harness-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: var(--rule-hair);
   border: var(--rule-hair) solid var(--color-rule);
   background: var(--color-rule);

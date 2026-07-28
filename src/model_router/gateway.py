@@ -91,6 +91,18 @@ def _local_cache_key(body: ChatCompletionRequest) -> str:
     )
 
 
+def _is_auto_model(requested_model: str, auto_ids: list[str] | None = None) -> bool:
+    """True when the client asked Prism to select a model.
+
+    Accepts configured ids plus any ``*/auto`` suffix (HolmesGPT LiteLLM often
+    sends ``openai/auto``).
+    """
+    ids = auto_ids if auto_ids is not None else load_policy().auto_model_ids
+    if requested_model in ids:
+        return True
+    return requested_model.endswith("/auto")
+
+
 def _route(
     *,
     requested_model: str,
@@ -110,7 +122,7 @@ def _route(
     classification = apply_session_classification(turn, prior=prior)
     sessions.set_task(session_id, classification)
 
-    if requested_model in policy_cfg.auto_model_ids:
+    if _is_auto_model(requested_model, policy_cfg.auto_model_ids):
         affinity = cache.get_affinity(session_id) if policy_cfg.prompt_cache_enabled else None
         decision = get_selection_policy().select(
             task_type=classification.task_type,
@@ -350,7 +362,7 @@ async def anthropic_messages(
     # Map Anthropic-style model aliases to router auto when requested
     requested = body.model
     policy_cfg = load_policy()
-    if requested in policy_cfg.auto_model_ids or requested.endswith("/auto"):
+    if _is_auto_model(requested, policy_cfg.auto_model_ids):
         requested = "model-router/auto"
 
     chat_body = ChatCompletionRequest(
@@ -527,7 +539,7 @@ async def chat_completions(
                 decision=None,
                 selected_model=selected_model,
                 litellm_model=litellm_model,
-                route_mode="auto" if body.model in policy_cfg.auto_model_ids else "passthrough",
+                route_mode="auto" if _is_auto_model(body.model, policy_cfg.auto_model_ids) else "passthrough",
                 latency_ms=latency_ms,
                 status="ok",
                 cache_hit=True,

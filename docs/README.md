@@ -7,6 +7,7 @@
 | [SECURITY.md](SECURITY.md) | Key rotation |
 | [OPENCODE.md](OPENCODE.md) | OpenCode harness |
 | [HERMES.md](HERMES.md) | Hermes Agent harness |
+| [HOLMESGPT.md](HOLMESGPT.md) | HolmesGPT (CNCF SRE agent) harness |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design |
 | [BENCHMARKS.md](BENCHMARKS.md) | Score provenance |
 | [CI.md](CI.md) | Pytest, monthly scrapers, GHCR, Vercel |

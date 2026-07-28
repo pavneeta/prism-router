@@ -12,6 +12,7 @@
 | Fireworks dumps `<think>` / CoT into chat | Keep `fireworks_hide_thinking: true` in `policy.yaml` (default). Sends `reasoning_effort=none` + `thinking.type=disabled` |
 | OpenCode cannot connect | Gateway up? Run from project with `opencode.json`; `baseURL` ends with `/v1` |
 | Hermes cannot connect | `provider: custom`, `base_url: http://127.0.0.1:4000/v1`, `default: auto` — or `python scripts/hermes_smoke.py` |
+| HolmesGPT cannot connect | `OPENAI_API_BASE=http://127.0.0.1:4000/v1`, `OPENAI_API_KEY=none`, `--model=openai/auto`; tools required — see [HOLMESGPT.md](HOLMESGPT.md) |
 
 ## Fireworks: hide thinking tokens
 

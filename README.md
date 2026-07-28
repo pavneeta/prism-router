@@ -32,7 +32,7 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 | Cache-aware | Local exact cache, session affinity (`X-Session-Id`), provider cache hints |
 | Drop-in API | OpenAI `POST /v1/chat/completions` (+ streaming) and Anthropic `POST /v1/messages` |
 | Providers | Fireworks, OpenAI, Anthropic, and anything LiteLLM supports |
-| Harness-friendly | Works with OpenCode, Hermes, and any OpenAI-compatible client |
+| Harness-friendly | Works with OpenCode, Hermes, HolmesGPT, and any OpenAI-compatible client |
 | Sessions | `X-Session-Id` task memory + `GET /v1/router/sessions/{id}` rollups |
 
 ---
@@ -84,6 +84,7 @@ Use model id `model-router/auto` or `auto`. Responses include a `model_router` b
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common errors and fixes |
 | **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
 | **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |
+| **[HolmesGPT](docs/HOLMESGPT.md)** | Point HolmesGPT (CNCF SRE agent) at Prism Router |
 | [Architecture](docs/ARCHITECTURE.md) | System design |
 | [Benchmarks](docs/BENCHMARKS.md) | Score provenance and task mapping |
 | [CI](docs/CI.md) | Pytest CI, monthly benchmarks, GHCR release |
@@ -122,6 +123,16 @@ model:
 ```
 
 See [docs/HERMES.md](docs/HERMES.md).
+
+**HolmesGPT** — OpenAI-compatible env + `openai/auto`:
+
+```bash
+export OPENAI_API_BASE=http://127.0.0.1:4000/v1
+export OPENAI_API_KEY=none
+holmes ask "what pods are failing?" --model=openai/auto
+```
+
+See [docs/HOLMESGPT.md](docs/HOLMESGPT.md) and [`examples/holmesgpt/`](examples/holmesgpt/).
 
 ---
 
