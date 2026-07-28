@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Prism Router — Intelligence-aware, cache-aware AI model routing</title>
+  <meta name="description" content="Prism Router (Model-Router) classifies each request, picks the cheapest model that clears an intelligence floor, and keeps sessions sticky so prompt caches stay warm. Open source LiteLLM gateway." />
+  <meta name="theme-color" content="#0a1418" />
+  <meta property="og:title" content="Prism Router" />
+  <meta property="og:description" content="Intelligence-aware, cache-aware inference routing for agent harnesses." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient__wash"></div>
+    <div class="ambient__grid"></div>
+    <div class="ambient__grain"></div>
+  </div>
+
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="page">
+    <header class="nav-term">
+      <div class="nav-term__inner">
+        <pre class="nav-term__line" aria-label="Primary"><span class="prompt">&gt;</span> prism-router <a href="#how">--how</a> <a href="#benchmarks">--benchmarks</a> <a href="#cache">--cache</a> <a href="#harnesses">--harnesses</a> <a href="#start">--start</a><span class="caret" aria-hidden="true">▮</span></pre>
+        <a class="nav-term__cta" href="https://github.com/pavneeta/prism-router">GitHub →</a>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="hero-h">
+        <div class="hero__copy">
+          <p class="hero__brand">
+            Prism Router
+            <span class="hero__brand-sub">Open source · Model-Router · LiteLLM gateway</span>
+          </p>
+          <h1 class="hero__display" id="hero-h">
+            Route by <span class="mark">intelligence</span>, not habit.
+          </h1>
+          <p class="hero__lede">
+            Drop-in OpenAI-compatible gateway that classifies each turn, picks the cheapest model that still clears an intelligence floor, and keeps multi-turn sessions sticky so prompt caches stay warm.
+          </p>
+          <div class="hero__cta">
+            <a class="btn btn--primary" href="https://github.com/pavneeta/prism-router">
+              <span>View on GitHub</span>
+              <span aria-hidden="true">→</span>
+            </a>
+            <a class="btn btn--ghost" href="https://github.com/pavneeta/prism-router/blob/main/docs/USAGE.md">
+              Read the docs
+            </a>
+          </div>
+        </div>
+
+        <div class="hero__visual" aria-hidden="true">
+          <!-- Hand-built prism apparatus · refraction physics -->
+          <svg class="apparatus" viewBox="0 0 320 320" role="img" aria-label="Optical prism dispersing a beam into a spectrum">
+            <defs>
+              <linearGradient id="beam-in" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="oklch(74% 0.14 195 / 0)" />
+                <stop offset="100%" stop-color="oklch(74% 0.14 195 / 0.85)" />
+              </linearGradient>
+              <linearGradient id="fan" x1="0" y1="0" x2="1" y2="0.35">
+                <stop offset="0%" stop-color="oklch(72% 0.16 195)" />
+                <stop offset="25%" stop-color="oklch(76% 0.14 145)" />
+                <stop offset="50%" stop-color="oklch(82% 0.14 95)" />
+                <stop offset="75%" stop-color="oklch(76% 0.15 55)" />
+                <stop offset="100%" stop-color="oklch(68% 0.17 25)" />
+              </linearGradient>
+              <linearGradient id="glass" x1="0.2" y1="0" x2="0.8" y2="1">
+                <stop offset="0%" stop-color="oklch(28% 0.04 210 / 0.55)" />
+                <stop offset="50%" stop-color="oklch(40% 0.06 200 / 0.35)" />
+                <stop offset="100%" stop-color="oklch(22% 0.03 220 / 0.6)" />
+              </linearGradient>
+            </defs>
+            <!-- scale ticks -->
+            <g stroke="oklch(40% 0.03 210)" stroke-width="1" opacity="0.7">
+              <line x1="24" y1="280" x2="296" y2="280" />
+              <line x1="24" y1="276" x2="24" y2="284" />
+              <line x1="96" y1="276" x2="96" y2="284" />
+              <line x1="168" y1="276" x2="168" y2="284" />
+              <line x1="240" y1="276" x2="240" y2="284" />
+              <line x1="296" y1="276" x2="296" y2="284" />
+            </g>
+            <!-- inbound beam -->
+            <rect x="8" y="148" width="92" height="3" fill="url(#beam-in)" />
+            <!-- prism body -->
+            <polygon points="108,86 210,160 108,234" fill="url(#glass)" stroke="oklch(74% 0.14 195 / 0.55)" stroke-width="1.5" />
+            <polygon points="118,110 188,160 118,210" fill="oklch(74% 0.14 195 / 0.06)" stroke="oklch(96% 0.01 210 / 0.15)" stroke-width="1" />
+            <!-- spectrum exit fan -->
+            <g opacity="0.9">
+              <path d="M210 160 L304 118" stroke="oklch(72% 0.16 195)" stroke-width="2" />
+              <path d="M210 160 L304 138" stroke="oklch(76% 0.14 145)" stroke-width="2" />
+              <path d="M210 160 L304 158" stroke="oklch(82% 0.14 95)" stroke-width="2" />
+              <path d="M210 160 L304 178" stroke="oklch(76% 0.15 55)" stroke-width="2" />
+              <path d="M210 160 L304 198" stroke="oklch(68% 0.17 25)" stroke-width="2" />
+            </g>
+            <path d="M210 148 L298 112 L298 204 L210 172 Z" fill="url(#fan)" opacity="0.18" />
+            <!-- measurement callouts -->
+            <circle cx="108" cy="160" r="3" fill="oklch(74% 0.14 195)" />
+            <circle cx="210" cy="160" r="3" fill="oklch(78% 0.13 75)" />
+          </svg>
+          <div class="apparatus__label">
+            <span><span>θ_in</span><span class="val">classify</span></span>
+            <span><span>λ split</span><span class="val">intelligence floor</span></span>
+            <span><span>θ_out</span><span class="val">min effective $</span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="how" aria-labelledby="how-h">
+        <header class="section-head reveal">
+          <p class="section-eyebrow"><span class="num tnum">01</span> · How it works</p>
+          <h2 class="section-h" id="how-h">Four stages. One request path.</h2>
+          <p class="section-lede">
+            Prism Router owns which model runs. LiteLLM owns how it is called. Classification and selection target negligible overhead on the heuristic path.
+          </p>
+        </header>
+
+        <ol class="steps">
+          <li class="step reveal">
+            <span class="step__stage tnum">1.0</span>
+            <div>
+              <h3 class="step__title">Classify the turn.</h3>
+              <p class="step__body">
+                Heuristic classifier maps the messages to a task type — code generation, review, tool-use agent, reasoning, summarization, chat — with confidence. Optional LLM classify only when needed.
+              </p>
+              <p class="step__meta">Target p99 &lt; 20–50 ms · heuristic path</p>
+            </div>
+          </li>
+          <li class="step reveal">
+            <span class="step__stage tnum">2.0</span>
+            <div>
+              <h3 class="step__title">Apply the intelligence floor.</h3>
+              <p class="step__body">
+                Benchmark seed scores set per-task accuracy thresholds. Models that cannot clear the floor for that task type are ineligible — cheaper never means under-provisioned.
+              </p>
+              <p class="step__meta">DeepSWE · SWE-bench · Terminal-Bench · AA · Arena</p>
+            </div>
+          </li>
+          <li class="step reveal">
+            <span class="step__stage tnum">3.0</span>
+            <div>
+              <h3 class="step__title">Minimize effective cost.</h3>
+              <p class="step__body">
+                Among eligible models, pick the lowest effective $/request — counting cached vs cold token rates, not list price alone. North star: lower $/task completion without giving up accuracy or turn latency.
+              </p>
+              <p class="step__meta">model-router/auto · OpenAI-compatible API</p>
+            </div>
+          </li>
+          <li class="step reveal">
+            <span class="step__stage tnum">4.0</span>
+            <div>
+              <h3 class="step__title">Stick the session.</h3>
+              <p class="step__body">
+                Session affinity via <code>X-Session-Id</code> keeps multi-turn work on one model so provider prompt caches stay warm. Flipping mid-session destroys cache hits; the policy prices that tradeoff explicitly.
+              </p>
+              <p class="step__meta">Local exact cache · provider cache hints</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section band-dark" id="benchmarks" aria-labelledby="bench-h">
+        <header class="section-head reveal">
+          <p class="section-eyebrow"><span class="num tnum">02</span> · Benchmarks</p>
+          <h2 class="section-h" id="bench-h">Public scores, not vibes.</h2>
+          <p class="section-lede">
+            Initial intelligence seed from public leaderboards. Task accuracy is derived per task type — missing sources are skipped, never silently zeroed.
+          </p>
+        </header>
+
+        <div class="bench-grid reveal">
+          <article class="bench-cell">
+            <p class="bench-cell__src">Datacurve</p>
+            <h3 class="bench-cell__name">DeepSWE</h3>
+            <p class="bench-cell__map">Maps to code generation &amp; review</p>
+          </article>
+          <article class="bench-cell">
+            <p class="bench-cell__src">SWE-bench</p>
+            <h3 class="bench-cell__name">Verified</h3>
+            <p class="bench-cell__map">Real GitHub issue resolution</p>
+          </article>
+          <article class="bench-cell">
+            <p class="bench-cell__src">tbench.ai</p>
+            <h3 class="bench-cell__name">Terminal-Bench</h3>
+            <p class="bench-cell__map">Agentic terminal · tool use</p>
+          </article>
+          <article class="bench-cell">
+            <p class="bench-cell__src">Artificial Analysis</p>
+            <h3 class="bench-cell__name">Intelligence Index</h3>
+            <p class="bench-cell__map">Reasoning prior &amp; composite</p>
+          </article>
+          <article class="bench-cell">
+            <p class="bench-cell__src">LMArena</p>
+            <h3 class="bench-cell__name">Arena Elo</h3>
+            <p class="bench-cell__map">Chat &amp; creative soft prior</p>
+          </article>
+        </div>
+
+        <p class="section-lede section-lede--after reveal">
+          Full derivation tables live in
+          <a href="https://github.com/pavneeta/prism-router/blob/main/docs/BENCHMARKS.md">docs/BENCHMARKS.md</a>.
+        </p>
+      </section>
+
+      <section class="section" id="cache" aria-labelledby="cache-h">
+        <header class="section-head reveal">
+          <p class="section-eyebrow"><span class="num tnum">03</span> · Cache-aware</p>
+          <h2 class="section-h" id="cache-h">Stickiness beats naive re-routing.</h2>
+          <p class="section-lede">
+            Cost includes cached-token rates and session cache state. The router prefers affinity when it wins on effective dollars.
+          </p>
+        </header>
+
+        <div class="cache-split">
+          <ul class="cache-points reveal">
+            <li>
+              <strong>Local exact cache</strong>
+              <p>Identical prompts return immediately without a provider hop.</p>
+            </li>
+            <li>
+              <strong>Session affinity</strong>
+              <p>Pass <code>X-Session-Id</code> so follow-up turns stay on the sticky model.</p>
+            </li>
+            <li>
+              <strong>Provider cache hints</strong>
+              <p>When supported, the gateway enables provider prompt-cache flags via LiteLLM.</p>
+            </li>
+          </ul>
+
+          <div class="code-panel reveal" aria-label="Example chat completions request">
+            <div class="code-panel__bar">
+              <span>request.json</span>
+              <span class="code-panel__chip tnum">200 OK</span>
+            </div>
+            <pre><code><span class="c"># curl → :4000/v1/chat/completions</span>
+{
+  <span class="k">"model"</span>: <span class="s" id="typed-line">"model-router/auto"</span>,
+  <span class="k">"messages"</span>: [{
+    <span class="k">"role"</span>: <span class="s">"user"</span>,
+    <span class="k">"content"</span>: <span class="s">"Write a Python hello world."</span>
+  }]
+}
+<span class="c"># Header: X-Session-Id: demo-1</span></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="harnesses" aria-labelledby="harness-h">
+        <header class="section-head reveal">
+          <p class="section-eyebrow"><span class="num tnum">04</span> · Harnesses</p>
+          <h2 class="section-h" id="harness-h">Point OpenCode or Hermes at :4000.</h2>
+          <p class="section-lede">
+            Provider keys live on the gateway. Clients only need an OpenAI-compatible base URL and model id <code>auto</code>.
+          </p>
+        </header>
+
+        <div class="harness-row reveal">
+          <article class="harness">
+            <h3 class="harness__name">OpenCode</h3>
+            <p class="harness__body">
+              Ship <code>opencode.json</code> in-repo or set the OpenAI-compatible provider to your Prism Router URL. Agent turns route through intelligence-aware selection.
+            </p>
+            <a class="harness__link" href="https://github.com/pavneeta/prism-router/blob/main/docs/OPENCODE.md">docs/OPENCODE.md →</a>
+          </article>
+          <article class="harness">
+            <h3 class="harness__name">Hermes Agent</h3>
+            <p class="harness__body">
+              Configure Hermes custom OpenAI provider with <code>base_url: http://127.0.0.1:4000/v1</code> and model <code>auto</code>. Dummy client key; real keys stay on the gateway.
+            </p>
+            <a class="harness__link" href="https://github.com/pavneeta/prism-router/blob/main/docs/HERMES.md">docs/HERMES.md →</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="section quick" id="start" aria-labelledby="start-h">
+        <div class="quick__grid">
+          <header class="section-head section-head--flush reveal">
+            <p class="section-eyebrow"><span class="num tnum">05</span> · Quick start</p>
+            <h2 class="section-h" id="start-h">Running in minutes.</h2>
+            <p class="section-lede">
+              Clone, install, add provider keys, start the gateway. Dry-run mode routes without provider spend.
+            </p>
+            <div class="hero__cta hero__cta--spaced">
+              <a class="btn btn--primary" href="https://github.com/pavneeta/prism-router">
+                <span>Clone the repo</span>
+                <span aria-hidden="true">→</span>
+              </a>
+              <a class="btn btn--ghost" href="https://github.com/pavneeta/prism-router/blob/main/docs/USAGE.md">
+                Full usage guide
+              </a>
+            </div>
+          </header>
+
+          <div class="reveal">
+            <ol class="quick__list">
+              <li>
+                <span class="n tnum">01</span>
+                <p><code>git clone https://github.com/pavneeta/prism-router.git</code></p>
+              </li>
+              <li>
+                <span class="n tnum">02</span>
+                <p><code>python3 -m venv .venv && source .venv/bin/activate</code></p>
+              </li>
+              <li>
+                <span class="n tnum">03</span>
+                <p><code>pip install -e ".[dev]" && cp .env.example .env</code></p>
+              </li>
+              <li>
+                <span class="n tnum">04</span>
+                <p>Add provider keys, then <code>model-router</code> → <code>http://127.0.0.1:4000</code></p>
+              </li>
+              <li>
+                <span class="n tnum">05</span>
+                <p>Or dry-run: <code>MODEL_ROUTER_DRY_RUN=true model-router</code></p>
+              </li>
+            </ol>
+
+            <nav class="doc-links" aria-label="Documentation">
+              <a href="https://github.com/pavneeta/prism-router/blob/main/docs/USAGE.md">Usage</a>
+              <a href="https://github.com/pavneeta/prism-router/blob/main/docs/ARCHITECTURE.md">Architecture</a>
+              <a href="https://github.com/pavneeta/prism-router/blob/main/docs/BENCHMARKS.md">Benchmarks</a>
+              <a href="https://github.com/pavneeta/prism-router/blob/main/docs/TROUBLESHOOTING.md">Troubleshooting</a>
+              <a href="https://github.com/pavneeta/prism-router/blob/main/README.md">README</a>
+            </nav>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot-stmt">
+      <p class="foot-stmt__line">Cheapest model that still clears the floor.</p>
+      <div class="foot-stmt__meta">
+        <span>Prism Router · Model-Router · MIT</span>
+        <div class="foot-stmt__links">
+          <a href="https://github.com/pavneeta/prism-router">GitHub</a>
+          <a href="https://github.com/pavneeta/prism-router/blob/main/docs/USAGE.md">Docs</a>
+          <a href="https://github.com/pavneeta/prism-router/blob/main/LICENSE">License</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

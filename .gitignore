@@ -11,3 +11,6 @@ dist/
 build/
 .DS_Store
 .cursor/
+.tmp-hallmark/
+website/.vercel/
+website/node_modules/
