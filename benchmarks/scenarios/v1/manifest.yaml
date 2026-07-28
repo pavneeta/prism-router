@@ -1,0 +1,19 @@
+schema_version: 1
+name: prism-stress-v1
+n_scenarios: 50
+task_types:
+  code_generation: 8
+  code_review_debug: 6
+  reasoning_math: 7
+  tool_use_agent: 7
+  summarization: 5
+  extraction_qa: 6
+  creative_writing: 5
+  general_chat: 6
+origins:
+  - original Prism scenarios for router calibration
+  - gsm8k-inspired / leetcode-style prompts (not redistributed full datasets)
+license_note: >
+  Scenarios are original or lightly inspired. Do not treat as official GSM8K/HumanEval dumps.
+generate: python scripts/generate_stress_scenarios.py
+run: python scripts/stress_bench.py --dry-run

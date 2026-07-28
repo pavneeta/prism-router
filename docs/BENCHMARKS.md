@@ -36,7 +36,10 @@ Computed in [`src/model_router/benchmarks.py`](../src/model_router/benchmarks.py
 
 Missing sources are skipped (no silent zeros). Models with no score for a task are ineligible for that task.
 
-## Harness caveat
+## First-party stress calibration
+
+Use [`docs/STRESS_BENCH.md`](STRESS_BENCH.md) (`scripts/stress_bench.py`) to measure pass rates on 50 internal scenarios across OpenAI / Anthropic / OSS and feed floor reviews. Dry-run wiring summary: [`docs/stress_runs/20260728T144931Z_dry_summary.md`](stress_runs/20260728T144931Z_dry_summary.md).
+
 
 SWE-bench and DeepSWE scores depend on agent harness + effort. Prefer **mini-swe-agent** / published DeepSWE rows for fair LM comparison. Third-party SWE tables can disagree sharply (e.g. Llama 4 Maverick) — we prefer official DeepSWE + AA + Terminal-Bench when present, and mark SWE rows with `note` when harness is unclear.
 

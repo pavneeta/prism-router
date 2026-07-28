@@ -1,0 +1,938 @@
+#!/usr/bin/env python3
+"""Generate benchmarks/scenarios/v1/scenarios.jsonl (50 scenarios, all task types)."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+OUT = Path(__file__).resolve().parents[1] / "benchmarks" / "scenarios" / "v1" / "scenarios.jsonl"
+
+K8S_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "kubectl_logs",
+            "description": "Fetch logs for a Kubernetes pod",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pod": {"type": "string"},
+                    "namespace": {"type": "string"},
+                    "tail": {"type": "integer"},
+                },
+                "required": ["pod", "namespace"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "kubectl_get",
+            "description": "Get Kubernetes resources",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "resource": {"type": "string"},
+                    "namespace": {"type": "string"},
+                    "name": {"type": "string"},
+                },
+                "required": ["resource", "namespace"],
+            },
+        },
+    },
+]
+
+
+def S(**kwargs):
+    return kwargs
+
+
+SCENARIOS: list[dict] = [
+    # --- code_generation (8) ---
+    S(
+        id="cg_01_merge_sorted",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="easy",
+        max_tokens=800,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a Python function `merge_sorted(a: list[int], b: list[int]) -> list[int]` that merges two sorted lists into one sorted list. Return only the function.",
+            }
+        ],
+        checks={"type": "python_exec", "setup": "a=[1,3,5]; b=[2,4,6]", "call": "merge_sorted(a,b)", "expect": [1, 2, 3, 4, 5, 6]},
+        tags=["humaneval-style", "lists"],
+        origin="original",
+    ),
+    S(
+        id="cg_02_binary_search",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="easy",
+        max_tokens=800,
+        messages=[
+            {
+                "role": "user",
+                "content": "Implement Python `binary_search(arr: list[int], target: int) -> int` returning the index of target in a sorted array, or -1 if missing. Return only the function.",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "arr=[1,3,5,7,9]",
+            "call": "binary_search(arr,7)",
+            "expect": 3,
+        },
+        tags=["algorithms"],
+        origin="original",
+    ),
+    S(
+        id="cg_03_valid_parens",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="medium",
+        max_tokens=900,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write Python `is_valid_parens(s: str) -> bool` that returns True iff parentheses (), [], {} are balanced. Return only the function.",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "",
+            "call": "is_valid_parens('{[()]}') and not is_valid_parens('([)]')",
+            "expect": True,
+        },
+        tags=["stack"],
+        origin="original",
+    ),
+    S(
+        id="cg_04_word_count",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="easy",
+        max_tokens=700,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write Python `word_count(text: str) -> dict[str,int]` counting lowercase words split on whitespace. Return only the function.",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "t='to be or not to be'",
+            "call": "word_count(t)",
+            "expect": {"to": 2, "be": 2, "or": 1, "not": 1},
+        },
+        tags=["strings"],
+        origin="original",
+    ),
+    S(
+        id="cg_05_lru_get",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="hard",
+        max_tokens=1400,
+        messages=[
+            {
+                "role": "user",
+                "content": "Implement a Python class `LRUCache` with `__init__(self, capacity: int)`, `get(self, key: int) -> int` (return -1 if missing), and `put(self, key: int, value: int) -> None`. O(1) average. Return only the class.",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "c=LRUCache(2); c.put(1,1); c.put(2,2); a=c.get(1); c.put(3,3); b=c.get(2)",
+            "call": "(a,b)",
+            "expect": [1, -1],
+        },
+        tags=["data-structures"],
+        origin="original",
+    ),
+    S(
+        id="cg_06_json_flatten",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="medium",
+        max_tokens=1000,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write Python `flatten_dict(d: dict, parent: str='') -> dict[str, object]` that flattens nested dicts with dot keys. Return only the function.",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "d={'a':{'b':1},'c':2}",
+            "call": "flatten_dict(d)",
+            "expect": {"a.b": 1, "c": 2},
+        },
+        tags=["dict"],
+        origin="original",
+    ),
+    S(
+        id="cg_07_two_sum",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="easy",
+        max_tokens=800,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write Python `two_sum(nums: list[int], target: int) -> list[int]` returning indices of two numbers that add to target. Return only the function.",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "nums=[2,7,11,15]",
+            "call": "sorted(two_sum(nums,9))",
+            "expect": [0, 1],
+        },
+        tags=["hashmap"],
+        origin="leetcode-style",
+    ),
+    S(
+        id="cg_08_debounce_note",
+        task_type="code_generation",
+        expect_task="code_generation",
+        difficulty="medium",
+        max_tokens=900,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a pure Python function `running_median(nums: list[int]) -> list[float]` that returns the median after each prefix of nums. For even counts use average of two middle values. Return only the function.",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "nums=[5,1,3]",
+            "call": "running_median(nums)",
+            "expect": [5.0, 3.0, 3.0],
+        },
+        tags=["streaming"],
+        origin="original",
+    ),
+    # --- code_review_debug (6) ---
+    S(
+        id="cr_01_off_by_one",
+        task_type="code_review_debug",
+        expect_task="code_review_debug",
+        difficulty="easy",
+        max_tokens=700,
+        messages=[
+            {
+                "role": "user",
+                "content": "Find the bug in this Python function and return ONLY the corrected function:\n\ndef sum_to_n(n):\n    s = 0\n    for i in range(1, n):\n        s += i\n    return s\n# Expected: sum_to_n(3) == 6",
+            }
+        ],
+        checks={
+            "type": "python_exec",
+            "setup": "",
+            "call": "sum_to_n(3)",
+            "expect": 6,
+        },
+        tags=["bugfix"],
+        origin="original",
+    ),
+    S(
+        id="cr_02_mutate_default",
+        task_type="code_review_debug",
+        expect_task="code_review_debug",
+        difficulty="medium",
+        max_tokens=800,
+        messages=[
+            {
+                "role": "user",
+                "content": "This function has a classic Python bug. Fix it and return ONLY the corrected function:\n\ndef append_item(item, bucket=[]):\n    bucket.append(item)\n    return bucket\n",
+            }
+        ],
+        checks={
+            "type": "contains_all",
+            "needles": ["None", "is None"],
+        },
+        tags=["defaults"],
+        origin="original",
+    ),
+    S(
+        id="cr_03_race_note",
+        task_type="code_review_debug",
+        expect_task="code_review_debug",
+        difficulty="medium",
+        max_tokens=900,
+        messages=[
+            {
+                "role": "user",
+                "content": "Review this snippet and explain the bug in ONE sentence, then give a one-line fix suggestion:\n\n```\nif user not in cache:\n    cache[user] = load_user(user)\nreturn cache[user]\n```\nAssume multi-threaded access without locks.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["race", "thread", "lock", "concurrent", "TOCTOU"]},
+        tags=["concurrency"],
+        origin="original",
+    ),
+    S(
+        id="cr_04_sql_inject",
+        task_type="code_review_debug",
+        expect_task="code_review_debug",
+        difficulty="easy",
+        max_tokens=600,
+        messages=[
+            {
+                "role": "user",
+                "content": "Identify the security bug:\n\ncursor.execute(f\"SELECT * FROM users WHERE name = '{username}'\")\n\nReply with the vulnerability name and a safer pattern in one short paragraph.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["injection", "parameter", "placeholder", "?"]},
+        tags=["security"],
+        origin="original",
+    ),
+    S(
+        id="cr_05_async_await",
+        task_type="code_review_debug",
+        expect_task="code_review_debug",
+        difficulty="medium",
+        max_tokens=700,
+        messages=[
+            {
+                "role": "user",
+                "content": "What's wrong with this asyncio code? Fix the function and return ONLY the corrected async function:\n\nasync def fetch_all(urls):\n    results = []\n    for url in urls:\n        results.append(await get(url))\n    return results\n# Prefer concurrent fetches with gather.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["gather", "create_task", "wait"]},
+        tags=["asyncio"],
+        origin="original",
+    ),
+    S(
+        id="cr_06_null_deref",
+        task_type="code_review_debug",
+        expect_task="code_review_debug",
+        difficulty="easy",
+        max_tokens=500,
+        messages=[
+            {
+                "role": "user",
+                "content": "Debug: `TypeError: 'NoneType' object is not subscriptable` on `cfg['db']['host']` when cfg may be None. Suggest a safe access pattern in Python in one line.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["get(", "or {}", "if cfg", "?."]},
+        tags=["null"],
+        origin="original",
+    ),
+    # --- reasoning_math (7) ---
+    S(
+        id="rm_01_gsm_apples",
+        task_type="reasoning_math",
+        expect_task="reasoning_math",
+        difficulty="easy",
+        max_tokens=400,
+        messages=[
+            {
+                "role": "user",
+                "content": "Natalia sold clips to 48 of her friends in April, and then she sold half as many clips in May. How many clips did Natalia sell altogether in April and May? Put the final integer answer after 'Answer:'.",
+            }
+        ],
+        checks={"type": "answer_int", "expect": 72},
+        tags=["gsm8k-style"],
+        origin="gsm8k-inspired",
+    ),
+    S(
+        id="rm_02_percent",
+        task_type="reasoning_math",
+        expect_task="reasoning_math",
+        difficulty="easy",
+        max_tokens=400,
+        messages=[
+            {
+                "role": "user",
+                "content": "A jacket costs $80. It is discounted by 25%, then tax of 10% is applied to the discounted price. What is the final price in dollars? Answer with a number after 'Answer:'.",
+            }
+        ],
+        checks={"type": "answer_number", "expect": 66.0, "tol": 0.01},
+        tags=["percent"],
+        origin="original",
+    ),
+    S(
+        id="rm_03_combinatorics",
+        task_type="reasoning_math",
+        expect_task="reasoning_math",
+        difficulty="medium",
+        max_tokens=500,
+        messages=[
+            {
+                "role": "user",
+                "content": "How many distinct ways can you arrange the letters in the word 'BOOK'? Show brief reasoning. Final integer after 'Answer:'.",
+            }
+        ],
+        checks={"type": "answer_int", "expect": 12},
+        tags=["combinatorics"],
+        origin="original",
+    ),
+    S(
+        id="rm_04_speed",
+        task_type="reasoning_math",
+        expect_task="reasoning_math",
+        difficulty="medium",
+        max_tokens=500,
+        messages=[
+            {
+                "role": "user",
+                "content": "A car travels 150 km in 2 hours, then 90 km in 1.5 hours. What is the average speed over the whole trip in km/h? Answer after 'Answer:'.",
+            }
+        ],
+        checks={"type": "answer_number", "expect": 240 / 3.5, "tol": 0.05},
+        tags=["rates"],
+        origin="original",
+    ),
+    S(
+        id="rm_05_modular",
+        task_type="reasoning_math",
+        expect_task="reasoning_math",
+        difficulty="medium",
+        max_tokens=400,
+        messages=[
+            {
+                "role": "user",
+                "content": "What is 7^5 mod 13? Brief work. Final integer after 'Answer:'.",
+            }
+        ],
+        checks={"type": "answer_int", "expect": 11},
+        tags=["number-theory"],
+        origin="original",
+    ),
+    S(
+        id="rm_06_probability",
+        task_type="reasoning_math",
+        expect_task="reasoning_math",
+        difficulty="medium",
+        max_tokens=500,
+        messages=[
+            {
+                "role": "user",
+                "content": "A fair coin is flipped 3 times. What is the probability of getting exactly two heads? Express as a reduced fraction a/b after 'Answer:'.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["3/8", "Answer: 3/8"]},
+        tags=["probability"],
+        origin="original",
+    ),
+    S(
+        id="rm_07_complexity",
+        task_type="reasoning_math",
+        expect_task="reasoning_math",
+        difficulty="hard",
+        max_tokens=700,
+        messages=[
+            {
+                "role": "user",
+                "content": "Prove briefly why merge sort is O(n log n) in the worst case. End with 'Answer: O(n log n)'.",
+            }
+        ],
+        checks={"type": "contains_all", "needles": ["O(n log n)", "Answer:"]},
+        tags=["algorithms-theory"],
+        origin="original",
+    ),
+    # --- tool_use_agent (7) ---
+    S(
+        id="tu_01_crashloop",
+        task_type="tool_use_agent",
+        expect_task="tool_use_agent",
+        difficulty="medium",
+        max_tokens=600,
+        tools=K8S_TOOLS,
+        messages=[
+            {
+                "role": "user",
+                "content": "Use tools to diagnose CrashLoopBackOff on pod payments-7d9f in namespace prod. Call kubectl_logs first.",
+            }
+        ],
+        checks={
+            "type": "tool_call",
+            "name": "kubectl_logs",
+            "args_contains": {"pod": "payments", "namespace": "prod"},
+        },
+        tags=["k8s", "holmes-shaped"],
+        origin="original",
+    ),
+    S(
+        id="tu_02_get_svc",
+        task_type="tool_use_agent",
+        expect_task="tool_use_agent",
+        difficulty="easy",
+        max_tokens=500,
+        tools=K8S_TOOLS,
+        messages=[
+            {
+                "role": "user",
+                "content": "Use kubectl_get to inspect the service named api-gateway in namespace staging.",
+            }
+        ],
+        checks={
+            "type": "tool_call",
+            "name": "kubectl_get",
+            "args_contains": {"namespace": "staging"},
+        },
+        tags=["k8s"],
+        origin="original",
+    ),
+    S(
+        id="tu_03_multi_tool",
+        task_type="tool_use_agent",
+        expect_task="tool_use_agent",
+        difficulty="hard",
+        max_tokens=800,
+        tools=K8S_TOOLS,
+        messages=[
+            {
+                "role": "user",
+                "content": "Investigate why ingress traffic to checkout is failing in ns ecommerce: list relevant resources then fetch logs for pod checkout-0. Prefer tool calls over guessing.",
+            }
+        ],
+        checks={"type": "tool_call_any", "names": ["kubectl_get", "kubectl_logs"]},
+        tags=["k8s"],
+        origin="original",
+    ),
+    S(
+        id="tu_04_oom",
+        task_type="tool_use_agent",
+        expect_task="tool_use_agent",
+        difficulty="medium",
+        max_tokens=600,
+        tools=K8S_TOOLS,
+        messages=[
+            {
+                "role": "user",
+                "content": "Pod worker-abc in namespace jobs was OOMKilled. Use tools to pull its recent logs (tail 200).",
+            }
+        ],
+        checks={"type": "tool_call", "name": "kubectl_logs", "args_contains": {"namespace": "jobs"}},
+        tags=["k8s"],
+        origin="original",
+    ),
+    S(
+        id="tu_05_deploy_status",
+        task_type="tool_use_agent",
+        expect_task="tool_use_agent",
+        difficulty="easy",
+        max_tokens=500,
+        tools=K8S_TOOLS,
+        messages=[
+            {
+                "role": "user",
+                "content": "Call kubectl_get for resource deployments in namespace default named web.",
+            }
+        ],
+        checks={
+            "type": "tool_call",
+            "name": "kubectl_get",
+            "args_contains": {"namespace": "default"},
+        },
+        tags=["k8s"],
+        origin="original",
+    ),
+    S(
+        id="tu_06_ns_scan",
+        task_type="tool_use_agent",
+        expect_task="tool_use_agent",
+        difficulty="medium",
+        max_tokens=600,
+        tools=K8S_TOOLS,
+        messages=[
+            {
+                "role": "user",
+                "content": "Use tools: get pods in namespace monitoring, then logs for pod prometheus-0 if present.",
+            }
+        ],
+        checks={"type": "tool_call_any", "names": ["kubectl_get", "kubectl_logs"]},
+        tags=["k8s"],
+        origin="original",
+    ),
+    S(
+        id="tu_07_auth_fail",
+        task_type="tool_use_agent",
+        expect_task="tool_use_agent",
+        difficulty="medium",
+        max_tokens=600,
+        tools=K8S_TOOLS,
+        messages=[
+            {
+                "role": "user",
+                "content": "Users report 401s from auth-proxy. Use kubectl_logs on pod auth-proxy-1 in namespace edge.",
+            }
+        ],
+        checks={
+            "type": "tool_call",
+            "name": "kubectl_logs",
+            "args_contains": {"pod": "auth-proxy", "namespace": "edge"},
+        },
+        tags=["k8s"],
+        origin="original",
+    ),
+    # --- summarization (5) ---
+    S(
+        id="su_01_cache_para",
+        task_type="summarization",
+        expect_task="summarization",
+        difficulty="easy",
+        max_tokens=300,
+        messages=[
+            {
+                "role": "user",
+                "content": "Summarize in exactly 2 sentences:\n\nPrompt caching stores repeated prefixes of LLM prompts on the provider so subsequent turns pay reduced input rates. Session affinity keeps an agent on one model so the growing conversation prefix remains cacheable. Switching models mid-session destroys that savings even if the new model has a lower list price. Routers that ignore cache state therefore overestimate savings from naive re-routing.",
+            }
+        ],
+        checks={"type": "summary_constraints", "max_sentences": 3, "needles_any": ["cache", "session", "model"]},
+        tags=["tech"],
+        origin="original",
+    ),
+    S(
+        id="su_02_incident",
+        task_type="summarization",
+        expect_task="summarization",
+        difficulty="medium",
+        max_tokens=350,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a 3-bullet executive summary of this incident note:\n\nAt 14:02 UTC checkout p95 latency rose from 120ms to 900ms. The on-call found a bad Redis config rolled out by CI. Rollback completed at 14:31; error budget burn was 8% of monthly allotment. No customer data loss. Follow-up: add canary for Redis chart.",
+            }
+        ],
+        checks={"type": "contains_all", "needles": ["Redis", "latency"]},
+        tags=["sre"],
+        origin="original",
+    ),
+    S(
+        id="su_03_paperish",
+        task_type="summarization",
+        expect_task="summarization",
+        difficulty="medium",
+        max_tokens=400,
+        messages=[
+            {
+                "role": "user",
+                "content": "Summarize the following in <=60 words focusing on the main claim:\n\nIntelligence floors in model routers refuse models whose public benchmark scores fall below a task-specific threshold. Among remaining models, the router minimizes effective dollar cost including cached token rates. This separates 'too dumb' from 'cheap enough', avoiding under-provisioning while still capturing OSS savings.",
+            }
+        ],
+        checks={"type": "max_words", "max_words": 70, "needles_any": ["floor", "cost", "benchmark"]},
+        tags=["product"],
+        origin="original",
+    ),
+    S(
+        id="su_04_changelog",
+        task_type="summarization",
+        expect_task="summarization",
+        difficulty="easy",
+        max_tokens=250,
+        messages=[
+            {
+                "role": "user",
+                "content": "Compress this changelog into one sentence:\n- Added HolmesGPT OpenAI-compatible integration\n- Session task memory for multi-turn routing\n- Fireworks thinking disable flag\n- Stress bench scaffolding planned",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["Holmes", "session", "Fireworks", "routing"]},
+        tags=["product"],
+        origin="original",
+    ),
+    S(
+        id="su_05_long_context",
+        task_type="summarization",
+        expect_task="summarization",
+        difficulty="hard",
+        max_tokens=400,
+        messages=[
+            {
+                "role": "user",
+                "content": "Summarize in 4 bullets the key risks:\n\n"
+                + (
+                    "The gateway exposes OpenAI and Anthropic compatible APIs. "
+                    "Mis-set intelligence floors cause either overspend or task failure. "
+                    "Missing provider keys yield authentication errors. "
+                    "In-memory session affinity does not survive multi-replica deploys without Redis. "
+                    "Benchmark scrapers may skip sources when public JSON is unavailable. "
+                )
+                * 8,
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["floor", "key", "affinity", "benchmark"]},
+        tags=["long"],
+        origin="original",
+    ),
+    # --- extraction_qa (6) ---
+    S(
+        id="ex_01_json_fields",
+        task_type="extraction_qa",
+        expect_task="extraction_qa",
+        difficulty="easy",
+        max_tokens=200,
+        messages=[
+            {
+                "role": "user",
+                "content": "From the text extract JSON with keys name and port only:\n\nService api-gateway listens on port 8080 in namespace edge. Owner: platform-team.",
+            }
+        ],
+        checks={
+            "type": "json_obj",
+            "expect": {"name": "api-gateway", "port": 8080},
+            "allow_extra": True,
+        },
+        tags=["json"],
+        origin="original",
+    ),
+    S(
+        id="ex_02_factoid",
+        task_type="extraction_qa",
+        expect_task="extraction_qa",
+        difficulty="easy",
+        max_tokens=100,
+        messages=[
+            {
+                "role": "user",
+                "content": "Context: Prism Router's default listen port is 4000.\nQuestion: What port does Prism listen on by default? Reply with the number only.",
+            }
+        ],
+        checks={"type": "answer_int", "expect": 4000},
+        tags=["qa"],
+        origin="original",
+    ),
+    S(
+        id="ex_03_tableish",
+        task_type="extraction_qa",
+        expect_task="extraction_qa",
+        difficulty="medium",
+        max_tokens=200,
+        messages=[
+            {
+                "role": "user",
+                "content": "Extract the model with lowest input_cost_per_m as plain text model id:\nopenai/gpt-4o-mini: 0.15\ndeepseek/deepseek-v4-pro: 0.435\nanthropic/claude-sonnet-5: 3.0",
+            }
+        ],
+        checks={"type": "contains_all", "needles": ["gpt-4o-mini"]},
+        tags=["table"],
+        origin="original",
+    ),
+    S(
+        id="ex_04_dates",
+        task_type="extraction_qa",
+        expect_task="extraction_qa",
+        difficulty="easy",
+        max_tokens=100,
+        messages=[
+            {
+                "role": "user",
+                "content": "Incident started 2026-07-28T14:02:00Z and ended 2026-07-28T14:31:00Z. How many minutes did it last? Number only.",
+            }
+        ],
+        checks={"type": "answer_int", "expect": 29},
+        tags=["time"],
+        origin="original",
+    ),
+    S(
+        id="ex_05_entities",
+        task_type="extraction_qa",
+        expect_task="extraction_qa",
+        difficulty="medium",
+        max_tokens=250,
+        messages=[
+            {
+                "role": "user",
+                "content": "List the three harnesses mentioned as a JSON array of strings:\nOpenCode, Hermes Agent, and HolmesGPT can all speak OpenAI-compatible APIs to Prism Router.",
+            }
+        ],
+        checks={
+            "type": "json_list_contains",
+            "needles": ["OpenCode", "Hermes", "HolmesGPT"],
+        },
+        tags=["ner"],
+        origin="original",
+    ),
+    S(
+        id="ex_06_bool",
+        task_type="extraction_qa",
+        expect_task="extraction_qa",
+        difficulty="easy",
+        max_tokens=50,
+        messages=[
+            {
+                "role": "user",
+                "content": "According to: 'fireworks_hide_thinking defaults to true in policy.yaml'. Does Prism hide Fireworks thinking by default? Answer yes or no.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["yes", "Yes"]},
+        tags=["bool"],
+        origin="original",
+    ),
+    # --- creative_writing (5) ---
+    S(
+        id="cw_01_haiku",
+        task_type="creative_writing",
+        expect_task="creative_writing",
+        difficulty="easy",
+        max_tokens=120,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a haiku about routing LLM traffic through a prism. Three lines only.",
+            }
+        ],
+        checks={"type": "line_count", "min_lines": 3, "max_lines": 5},
+        tags=["poetry"],
+        origin="original",
+    ),
+    S(
+        id="cw_02_changelog_fun",
+        task_type="creative_writing",
+        expect_task="creative_writing",
+        difficulty="easy",
+        max_tokens=200,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a playful 4-sentence product blurb for an intelligence-aware model router without using the words 'synergy' or 'revolutionary'.",
+            }
+        ],
+        checks={"type": "forbidden", "forbidden": ["synergy", "revolutionary"]},
+        tags=["marketing"],
+        origin="original",
+    ),
+    S(
+        id="cw_03_dialogue",
+        task_type="creative_writing",
+        expect_task="creative_writing",
+        difficulty="medium",
+        max_tokens=350,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a short dialogue (6 lines) between an SRE and a model router arguing about cost vs accuracy.",
+            }
+        ],
+        checks={"type": "line_count", "min_lines": 6, "max_lines": 20},
+        tags=["dialogue"],
+        origin="original",
+    ),
+    S(
+        id="cw_04_metaphor",
+        task_type="creative_writing",
+        expect_task="creative_writing",
+        difficulty="medium",
+        max_tokens=250,
+        messages=[
+            {
+                "role": "user",
+                "content": "Explain prompt caching using a metaphor involving a library bookmark. Max 80 words.",
+            }
+        ],
+        checks={"type": "max_words", "max_words": 100, "needles_any": ["bookmark", "library", "cache"]},
+        tags=["metaphor"],
+        origin="original",
+    ),
+    S(
+        id="cw_05_warning",
+        task_type="creative_writing",
+        expect_task="creative_writing",
+        difficulty="easy",
+        max_tokens=150,
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a stern two-sentence warning label for flipping models mid-session and destroying the prompt cache.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["cache", "session", "model"]},
+        tags=["warning"],
+        origin="original",
+    ),
+    # --- general_chat (6) ---
+    S(
+        id="gc_01_hello",
+        task_type="general_chat",
+        expect_task="general_chat",
+        difficulty="easy",
+        max_tokens=80,
+        messages=[{"role": "user", "content": "Say hello to the on-call engineer in one short sentence."}],
+        checks={"type": "max_words", "max_words": 40, "needles_any": ["hello", "Hello", "hi", "Hi"]},
+        tags=["chat"],
+        origin="original",
+    ),
+    S(
+        id="gc_02_thanks",
+        task_type="general_chat",
+        expect_task="general_chat",
+        difficulty="easy",
+        max_tokens=80,
+        messages=[{"role": "user", "content": "Thanks for the help earlier. Reply briefly and warmly."}],
+        checks={"type": "max_words", "max_words": 50},
+        tags=["chat"],
+        origin="original",
+    ),
+    S(
+        id="gc_03_clarify",
+        task_type="general_chat",
+        expect_task="general_chat",
+        difficulty="easy",
+        max_tokens=120,
+        messages=[
+            {
+                "role": "user",
+                "content": "I might mean either Redis or Postgres. Ask one clarifying question only.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["?", "Redis", "Postgres"]},
+        tags=["clarify"],
+        origin="original",
+    ),
+    S(
+        id="gc_04_status",
+        task_type="general_chat",
+        expect_task="general_chat",
+        difficulty="easy",
+        max_tokens=100,
+        messages=[{"role": "user", "content": "How are you? Keep it to one sentence."}],
+        checks={"type": "max_words", "max_words": 40},
+        tags=["chat"],
+        origin="original",
+    ),
+    S(
+        id="gc_05_recommend",
+        task_type="general_chat",
+        expect_task="general_chat",
+        difficulty="medium",
+        max_tokens=200,
+        messages=[
+            {
+                "role": "user",
+                "content": "In two sentences, recommend whether a startup should always use the largest LLM.",
+            }
+        ],
+        checks={"type": "contains_any", "needles": ["not", "cost", "task", "depend"]},
+        tags=["advice"],
+        origin="original",
+    ),
+    S(
+        id="gc_06_ack",
+        task_type="general_chat",
+        expect_task="general_chat",
+        difficulty="easy",
+        max_tokens=60,
+        messages=[{"role": "user", "content": "Acknowledge receipt of incident ticket INC-4421 in one sentence."}],
+        checks={"type": "contains_all", "needles": ["INC-4421"]},
+        tags=["ops"],
+        origin="original",
+    ),
+]
+
+
+def main() -> None:
+    assert len(SCENARIOS) == 50, len(SCENARIOS)
+    by_task: dict[str, int] = {}
+    for s in SCENARIOS:
+        by_task[s["task_type"]] = by_task.get(s["task_type"], 0) + 1
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    with OUT.open("w", encoding="utf-8") as f:
+        for s in SCENARIOS:
+            f.write(json.dumps(s, ensure_ascii=False) + "\n")
+    print(f"Wrote {len(SCENARIOS)} scenarios to {OUT}")
+    print("By task:", by_task)
+
+
+if __name__ == "__main__":
+    main()

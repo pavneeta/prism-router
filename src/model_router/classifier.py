@@ -31,20 +31,37 @@ _CODE_GEN = re.compile(
     re.I | re.S,
 )
 _CODE_DEBUG = re.compile(
-    r"\b(bug|debug|fix|error|stack\s*trace|exception|failing\s+test|why\s+doesn'?t)\b",
+    r"\b(bug|debug|fix|stack\s*trace|exception|failing\s+test|why\s+doesn'?t|"
+    r"TypeError|null\s+deref|security\s+bug|classic\s+python\s+bug)\b",
     re.I,
 )
 _REASONING = re.compile(
-    r"\b(prove|theorem|derive|optimize|complexity|step[- ]by[- ]step|math|equation|leetcode)\b",
+    r"\b(prove|theorem|derive|optimize|complexity|step[- ]by[- ]step|math|equation|leetcode)\b"
+    r"|\b(how\s+many|probability|mod\b|average\s+speed|combinat|fraction|Answer:|"
+    r"discounted|final\s+price|altogether)\b"
+    r"|\b(\d+\s*(km|miles|friends|clips|dollars|%|percent))\b",
     re.I,
 )
-_SUMMARY = re.compile(r"\b(summarize|summary|tl;dr|tldr|condense|key\s+points)\b", re.I)
+_SUMMARY = re.compile(
+    r"\b(summarize|summary|tl;dr|tldr|condense|key\s+points|executive\s+summary|"
+    r"in\s+exactly\s+\d+\s+sentences|in\s+\d+\s+bullets|compress\s+this|"
+    r"\d+-bullet)\b",
+    re.I,
+)
 _EXTRACT = re.compile(
-    r"\b(extract|parse|find\s+all|what\s+is\s+the|according\s+to\s+the\s+(doc|text|passage))\b",
+    r"\b(extract|parse|find\s+all|according\s+to\s+the\s+(doc|text|passage)|"
+    r"reply\s+with\s+the\s+number\s+only|json\s+array|json\s+with\s+keys)\b",
     re.I,
 )
-_CREATIVE = re.compile(r"\b(poem|story|lyrics|novel|screenplay|creative\s+writing)\b", re.I)
-_TOOLISH = re.compile(r"\b(use\s+tools?|function\s+call|call\s+the\s+api|agent|browse|search\s+the\s+web)\b", re.I)
+_CREATIVE = re.compile(
+    r"\b(poem|story|lyrics|novel|screenplay|creative\s+writing|haiku|dialogue|metaphor)\b",
+    re.I,
+)
+_TOOLISH = re.compile(
+    r"\b(use\s+tools?|function\s+call|call\s+the\s+api|kubectl_|browse|search\s+the\s+web|"
+    r"tool\s+calls?)\b",
+    re.I,
+)
 
 # Content classes strong enough that tools_present must not override them
 _STRONG_CONTENT_TYPES = frozenset(
