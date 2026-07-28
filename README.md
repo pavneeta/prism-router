@@ -112,3 +112,12 @@ tests/
 - Online anonymized benchmark updates from harness ticks
 - Cloud multi-replica gateway + shared affinity/cache store
 - First-class harness adapters (Hermes, open-code, …)
+
+## Benchmark refresh (CI)
+
+Monthly GitHub Action refreshes `config/benchmarks.yaml` from public leaderboards and opens a PR. No provider API keys. See [docs/CI.md](docs/CI.md).
+
+```bash
+python scripts/update_benchmarks.py --dry-run -v
+```
+
