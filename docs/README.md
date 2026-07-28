@@ -8,6 +8,7 @@
 | [OPENCODE.md](OPENCODE.md) | OpenCode harness |
 | [HERMES.md](HERMES.md) | Hermes Agent harness |
 | [HOLMESGPT.md](HOLMESGPT.md) | HolmesGPT (CNCF SRE agent) harness |
+| [HARNESS_BENCH.md](HARNESS_BENCH.md) | Cross-harness × provider bench |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design |
 | [BENCHMARKS.md](BENCHMARKS.md) | Score provenance |
 | [CI.md](CI.md) | Pytest, monthly scrapers, GHCR, Vercel |
