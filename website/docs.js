@@ -147,6 +147,32 @@
     });
   }
 
+  /** Public docs UI: drop eng-facing sections from rendered HTML (files stay in docs/). */
+  const HIDDEN_SECTIONS = {
+    BENCHMARKS: ["normalization", "task-accuracy-derivation"],
+  };
+
+  function removeHiddenSections(root, docId) {
+    const ids = HIDDEN_SECTIONS[docId];
+    if (!ids || !ids.length) return;
+    for (const id of ids) {
+      const heading = root.querySelector(`#${CSS.escape(id)}`);
+      if (!heading) continue;
+      const level = parseInt(heading.tagName.slice(1), 10);
+      const toRemove = [heading];
+      let el = heading.nextElementSibling;
+      while (el) {
+        const next = el.nextElementSibling;
+        if (/^H[1-6]$/.test(el.tagName) && parseInt(el.tagName.slice(1), 10) <= level) {
+          break;
+        }
+        toRemove.push(el);
+        el = next;
+      }
+      toRemove.forEach((node) => node.remove());
+    }
+  }
+
   async function loadDoc(id, replaceHistory) {
     const entry = entryFor(id);
     renderNav(entry.id);
@@ -167,6 +193,7 @@
       const clean = DOMPurify.sanitize(dirty, { USE_PROFILES: { html: true } });
       articleEl.innerHTML = clean;
       addHeadingIds(articleEl);
+      removeHiddenSections(articleEl, entry.id);
       rewriteDocLinks(articleEl);
       articleEl.querySelectorAll("pre").forEach((pre) => pre.classList.add("docs-code"));
       window.scrollTo({ top: 0 });

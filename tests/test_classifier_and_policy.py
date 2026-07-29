@@ -326,3 +326,33 @@ def test_provider_cache_hints_openai_session_key():
         session_id="agent-1",
     )
     assert extra.get("prompt_cache_key") == "agent-1"
+
+
+def test_provider_cache_hints_fireworks_session_affinity():
+    messages = [{"role": "user", "content": "hi"}]
+    _, _, extra = apply_provider_cache_hints(
+        model="fireworks_ai/accounts/fireworks/models/deepseek-v4-pro",
+        messages=messages,
+        tools=None,
+        supports_prompt_caching=True,
+        session_id="fw-session-1",
+        fireworks_hide_thinking=True,
+    )
+    assert extra.get("prompt_cache_key") == "fw-session-1"
+    assert extra.get("extra_headers", {}).get("x-session-affinity") == "fw-session-1"
+    assert extra.get("perf_metrics_in_response") is True
+    assert extra.get("thinking") == {"type": "disabled"}
+
+
+def test_provider_cache_hints_fireworks_skipped_without_session():
+    _, _, extra = apply_provider_cache_hints(
+        model="fireworks_ai/accounts/fireworks/models/kimi-k3",
+        messages=[{"role": "user", "content": "hi"}],
+        tools=None,
+        supports_prompt_caching=True,
+        session_id=None,
+        fireworks_hide_thinking=False,
+    )
+    assert "prompt_cache_key" not in extra
+    assert "extra_headers" not in extra
+    assert "perf_metrics_in_response" not in extra

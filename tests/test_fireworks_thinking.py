@@ -11,6 +11,8 @@ def test_fireworks_hide_thinking_adds_kwargs():
     )
     assert extra["thinking"] == {"type": "disabled"}
     assert "reasoning_effort" not in extra
+    # Caching affinity is gated on supports_prompt_caching + session_id.
+    assert "prompt_cache_key" not in extra
 
 
 def test_fireworks_hide_thinking_can_be_disabled():

@@ -20,7 +20,7 @@ Do **not** set `OPENAI_API_BASE` on the Railway **service itself** to the Railwa
 
 ## Production checklist
 
-1. **Replicas:** keep **1** Railway replica (or sticky sessions). Prompt-cache affinity and session task memory are **in-memory** and do not share across instances. Multi-replica without Redis → cold affinity per instance (routing still works).
+1. **Replicas:** production runs **2** Railway replicas behind the same public URL (`prism-router-production.up.railway.app`). Railway does **not** guarantee sticky sessions — prompt-cache affinity and session task memory are **in-memory per process**, so cache/affinity may miss when a request lands on the other replica (routing still works). Shared Redis (or equivalent) is the follow-up for cross-replica affinity.
 2. **Dry-run / mirror:** `MODEL_ROUTER_DRY_RUN=false`, `MODEL_ROUTER_MIRROR_MODE=false` unless intentionally shadow-evaling (~2× spend).
 3. **Provider keys only:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FIREWORKS_API_KEY` (+ optional Together/Groq). No client `OPENAI_API_BASE` on the service.
 4. **Telemetry path:** ephemeral FS — use `/tmp/model-router/telemetry.jsonl` (Dockerfile default). Writes fail soft; requests still succeed.

@@ -463,9 +463,9 @@ async def ready() -> JSONResponse:
                 # In-memory cache/affinity — not shared across replicas
                 "session_store": "in_memory",
                 "note": (
-                    "Run a single Railway replica (or sticky sessions) so prompt-cache "
-                    "affinity stays consistent; multi-replica without shared store "
-                    "degrades to cold routing per instance."
+                    "Session affinity and local prompt cache are in-memory per process. "
+                    "With multiple replicas, sticky sessions are not guaranteed — "
+                    "cache/affinity may miss across instances (routing still works)."
                 ),
             }
         )

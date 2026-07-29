@@ -1,12 +1,14 @@
 # Prism Router API on Railway — Dockerfile build from repo root.
 # Marketing site stays on Vercel (website/). See docs/RAILWAY.md.
-# Keep a single replica unless affinity/session store is shared (in-memory today).
+# 2 replicas share one public URL. Sticky sessions are NOT guaranteed —
+# in-memory affinity / prompt cache may miss across replicas (routing still works).
 
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
+numReplicas = 2
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"

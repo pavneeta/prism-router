@@ -92,9 +92,12 @@ def apply_provider_cache_hints(
     - Anthropic / Claude: ``cache_control`` on system (+ last tool) and
       LiteLLM ``cache_control_injection_points`` as a belt-and-suspenders.
     - OpenAI family: optional ``prompt_cache_key`` (session sticky routing hint).
-    - Fireworks: when ``fireworks_hide_thinking``, send
-      ``thinking={"type":"disabled"}`` so CoT is not dumped into visible
-      ``content`` (Fireworks rejects combining this with ``reasoning_effort``).
+    - Fireworks: caching is on by default; pass ``prompt_cache_key`` plus
+      ``x-session-affinity`` so multi-replica serverless sticks to one KV
+      cache. ``perf_metrics_in_response`` surfaces ``cached-prompt-tokens``.
+      When ``fireworks_hide_thinking``, send ``thinking={"type":"disabled"}``
+      so CoT is not dumped into visible ``content`` (Fireworks rejects
+      combining this with ``reasoning_effort``).
     """
     msgs = copy.deepcopy(messages)
     tools_out = copy.deepcopy(tools) if tools else None
@@ -114,6 +117,15 @@ def apply_provider_cache_hints(
             ]
         elif _is_openai_family(model) and session_id:
             extra["prompt_cache_key"] = session_id
+        elif _is_fireworks_family(model) and session_id:
+            # Preferred Fireworks sticky key (takes priority over ``user``).
+            # https://docs.fireworks.ai/guides/prompt-caching
+            extra["prompt_cache_key"] = session_id
+            headers = dict(extra.get("extra_headers") or {})
+            headers.setdefault("x-session-affinity", session_id)
+            extra["extra_headers"] = headers
+            # Body metrics (headers alone are dedicated-deployment oriented).
+            extra["perf_metrics_in_response"] = True
 
     if fireworks_hide_thinking and _is_fireworks_family(model):
         # Fireworks chat completions: only one of thinking / reasoning_effort.

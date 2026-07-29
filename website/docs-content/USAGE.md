@@ -107,6 +107,10 @@ Send a stable `X-Session-Id` header (or `session_id` on `/v1/router/explain`) to
 2. **Session task memory** — weak follow-ups keep the prior task type until a confident drift  
 3. **Rollups** — `GET /v1/router/sessions/{id}` returns request count, latency, tokens, estimated/actual $, frontier delta, and estimated cache savings  
 
+Provider cache hints (when `prompt_cache_enabled` and the model supports caching): Anthropic gets `cache_control`; OpenAI/Fireworks get a session `prompt_cache_key`. Fireworks also receives `x-session-affinity` (KV cache is replica-local — keep a stable session id, and prefer a single gateway replica for affinity).
+
+Fireworks tip: provider `cached_tokens` show up reliably on multi-turn / identical retries with a long shared prefix (a few thousand tokens in practice). Very short prompts may stay at `cached_tokens: 0` even with affinity hints.
+
 ### Streaming
 
 `POST /v1/chat/completions` with `"stream": true` returns OpenAI-style SSE. Anthropic `/v1/messages` streaming is not implemented yet — use chat completions for streams.
