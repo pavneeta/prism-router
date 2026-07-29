@@ -2,7 +2,7 @@
 
 Install, configure, and call **Prism Router**. See also [OPENCODE.md](OPENCODE.md), [HERMES.md](HERMES.md), [HOLMESGPT.md](HOLMESGPT.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [SECURITY.md](SECURITY.md), [CI.md](CI.md).
 
-**Live marketing site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
+**Live marketing site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) · **Docs:** [https://prism-router-ten.vercel.app/docs](https://prism-router-ten.vercel.app/docs)
 
 ## Install & run
 
@@ -19,7 +19,29 @@ Dry-run (routing only, no provider spend):
 
 ```bash
 MODEL_ROUTER_DRY_RUN=true model-router
+# or
+model-router --dry-run
 ```
+
+### Mirror mode (shadow eval)
+
+For **passthrough** requests (customer picks an explicit model), Prism still returns that model’s answer, and in the background also runs **`auto`** selection + completion. Both sides are appended to JSONL for offline comparison. Optionally a small LLM judges the pair.
+
+```bash
+model-router --mirror-mode --mirror-judge
+# or env:
+# MODEL_ROUTER_MIRROR_MODE=true
+# MODEL_ROUTER_MIRROR_JUDGE=true
+# MODEL_ROUTER_MIRROR_PATH=logs/mirror.jsonl
+# MODEL_ROUTER_MIRROR_JUDGE_MODEL=openai/gpt-4o-mini
+```
+
+- Client latency ≈ primary only (shadow is background).
+- Skipped when the client already requests `auto` / `*/auto`, or `stream=true`.
+- Response `model_router.mirror` confirms logging path.
+- Summarize later: `python scripts/mirror_summary.py`
+
+**Cost:** each mirrored request can be ~2× provider spend (+ judge ≈ 3×). Keep off in production unless evaluating.
 
 ## API
 
@@ -59,17 +81,16 @@ Restart the gateway after YAML edits.
 
 Reasoning models on Fireworks can dump chain-of-thought into visible `content`. Prism Router defaults `fireworks_hide_thinking: true` in `policy.yaml`, which sends:
 
-- `reasoning_effort: "none"`
 - `thinking: {"type": "disabled"}`
 
-Set `fireworks_hide_thinking: false` if you want CoT in the response. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and [Fireworks chat completions](https://docs.fireworks.ai/api-reference/post-chatcompletions).
+(Fireworks rejects combining this with `reasoning_effort`.) Set `fireworks_hide_thinking: false` if you want CoT in the response. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) and [Fireworks chat completions](https://docs.fireworks.ai/api-reference/post-chatcompletions).
 
 ## Telemetry
 
 - Per-request JSONL: path from `MODEL_ROUTER_TELEMETRY_PATH` (default `logs/telemetry.jsonl`)
+- Mirror shadow-eval JSONL: `MODEL_ROUTER_MIRROR_PATH` (default `logs/mirror.jsonl`) when `--mirror-mode` is on
 - Per-session rollups: `logs/session_rollups.jsonl` + HTTP `GET /v1/router/sessions/{id}`
 - Offline CPT-style distribution: `python scripts/cpt_routing_eval.py`
-
 ## Smoke tests
 
 ```bash

@@ -19,8 +19,14 @@ Built with [Nutlope Hallmark](https://github.com/Nutlope/hallmark) conventions:
 cd website
 python3 -m http.server 5173
 # open http://127.0.0.1:5173
+# docs UI: http://127.0.0.1:5173/docs.html  (or /docs with a static server that maps clean URLs)
 ```
 
+### Docs page
+
+`/docs` (`docs.html` + `docs.js`) renders the same markdown as the repo’s `docs/` folder.
+
+Because the GitHub repo is private, markdown is **copied into** `website/docs-content/` by `sync-docs.sh` (also the Vercel `buildCommand`). Edit docs under `docs/`, run `./website/sync-docs.sh` (or deploy), and the site stays in sync. If the repo is made public later, the viewer also falls back to jsDelivr / raw GitHub.
 ## Deploy (Vercel)
 
 Production: [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)

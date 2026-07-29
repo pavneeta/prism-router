@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     model_router_host: str = "0.0.0.0"
     model_router_port: int = 4000
     model_router_dry_run: bool = False
+    # Shadow-eval: also run auto routing/completion alongside customer model
+    model_router_mirror_mode: bool = False
+    model_router_mirror_path: str = "logs/mirror.jsonl"
+    model_router_mirror_judge: bool = False
+    model_router_mirror_judge_model: str = "openai/gpt-4o-mini"
 
     @property
     def config_dir(self) -> Path:

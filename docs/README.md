@@ -15,4 +15,6 @@
 | [CI.md](CI.md) | Pytest, monthly scrapers, GHCR, Vercel |
 | [AB_ANTHROPIC_VS_FIREWORKS.md](AB_ANTHROPIC_VS_FIREWORKS.md) | A/B session notes |
 
-**Site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) · **Repo:** [pavneeta/prism-router](https://github.com/pavneeta/prism-router)
+**Site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) · **Docs UI:** [https://prism-router-ten.vercel.app/docs](https://prism-router-ten.vercel.app/docs) · **Repo:** [pavneeta/prism-router](https://github.com/pavneeta/prism-router)
+
+The marketing site docs page (`/docs`) renders these files. Content is synced into `website/docs-content/` at deploy time (`website/sync-docs.sh`) so the private repo still serves docs on Vercel.

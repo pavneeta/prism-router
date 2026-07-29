@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from model_router.classifier import Classification, classify_messages
 from model_router.config import get_selection_policy, get_settings, load_policy
 from model_router.litellm_backend import acompletion, apply_provider_cache_hints, completion_cost
+from model_router.mirror import schedule_mirror_eval, should_mirror
 from model_router.policy import RoutingDecision, estimate_input_tokens
 from model_router.prompt_cache import get_prompt_cache
 from model_router.sessions import apply_session_classification, get_session_store
@@ -316,6 +317,8 @@ async def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "dry_run": settings.model_router_dry_run,
+        "mirror_mode": settings.model_router_mirror_mode,
+        "mirror_judge": settings.model_router_mirror_judge,
         "providers": {
             "openai": bool(os.getenv("OPENAI_API_KEY")),
             "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
@@ -780,6 +783,54 @@ async def chat_completions(
         cache_layer=decision.cache_layer if decision else "none",
     )
 
+    if should_mirror(
+        settings,
+        requested_model=body.model,
+        route_mode=route_mode,
+        stream=False,
+    ):
+        payload["model_router"]["mirror"] = {
+            "enabled": True,
+            "path": settings.model_router_mirror_path,
+            "judge": settings.model_router_mirror_judge,
+        }
+        primary_content = None
+        try:
+            choices = payload.get("choices") or []
+            if choices:
+                primary_content = (choices[0].get("message") or {}).get("content")
+        except Exception:  # noqa: BLE001
+            primary_content = None
+        primary_usage = None
+        if usage is not None:
+            primary_usage = (
+                usage.model_dump()
+                if hasattr(usage, "model_dump")
+                else {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": getattr(usage, "total_tokens", None),
+                }
+            )
+        # Base kwargs without primary-only cache extras for a clean shadow call.
+        shadow_kwargs = _completion_kwargs(body, litellm_model)
+        schedule_mirror_eval(
+            settings=settings,
+            request_id=request_id,
+            session_id=x_session_id,
+            requested_model=body.model,
+            primary_litellm_model=litellm_model,
+            primary_content=primary_content if isinstance(primary_content, str) else None,
+            primary_usage=primary_usage,
+            classification=classification,
+            prompt_text=_prompt_text(body.messages),
+            raw_messages=raw_messages,
+            tools=body.tools,
+            completion_kwargs=shadow_kwargs,
+            likely_prefix_reuse=_likely_prefix_reuse(body.messages, body.tools),
+            decision_payload_fn=_decision_payload,
+        )
+
     if cache_key is not None:
         cache.put_local(cache_key, payload)
 
@@ -811,6 +862,55 @@ async def chat_completions(
 
 
 def main() -> None:
+    import argparse
+    import os
+
+    ap = argparse.ArgumentParser(description="Prism Router — OpenAI-compatible gateway")
+    ap.add_argument("--host", default=None, help="Bind host (default from settings)")
+    ap.add_argument("--port", type=int, default=None, help="Bind port (default from settings)")
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Route/classify only; do not call providers",
+    )
+    ap.add_argument(
+        "--mirror-mode",
+        action="store_true",
+        help="Also run auto path for passthrough requests; log both outputs to JSONL",
+    )
+    ap.add_argument(
+        "--mirror-path",
+        default=None,
+        help="Mirror JSONL path (default logs/mirror.jsonl)",
+    )
+    ap.add_argument(
+        "--mirror-judge",
+        action="store_true",
+        help="After mirror completions, score primary vs auto with a small LLM judge",
+    )
+    ap.add_argument(
+        "--mirror-judge-model",
+        default=None,
+        help="Judge model id (default openai/gpt-4o-mini)",
+    )
+    args = ap.parse_args()
+
+    if args.dry_run:
+        os.environ["MODEL_ROUTER_DRY_RUN"] = "true"
+    if args.mirror_mode:
+        os.environ["MODEL_ROUTER_MIRROR_MODE"] = "true"
+    if args.mirror_path:
+        os.environ["MODEL_ROUTER_MIRROR_PATH"] = args.mirror_path
+    if args.mirror_judge:
+        os.environ["MODEL_ROUTER_MIRROR_JUDGE"] = "true"
+    if args.mirror_judge_model:
+        os.environ["MODEL_ROUTER_MIRROR_JUDGE_MODEL"] = args.mirror_judge_model
+    if args.host:
+        os.environ["MODEL_ROUTER_HOST"] = args.host
+    if args.port is not None:
+        os.environ["MODEL_ROUTER_PORT"] = str(args.port)
+
+    get_settings.cache_clear()
     settings = get_settings()
     uvicorn.run(
         "model_router.gateway:app",
