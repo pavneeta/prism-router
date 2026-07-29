@@ -4,19 +4,18 @@ The **API gateway** (FastAPI + LiteLLM) deploys on [Railway](https://railway.com
 
 ## Public base URL
 
-After the first successful deploy, Railway assigns a public HTTPS host (typically `*.up.railway.app`). Clients should set:
+**Production:** [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app)
 
 ```bash
-export OPENAI_API_BASE="https://<your-service>.up.railway.app/v1"
-# OpenAI-compatible clients:
-#   model: auto   or   model-router/auto
-curl -sS "$OPENAI_API_BASE/../health"
+export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
+# OpenAI-compatible clients: model auto  or  model-router/auto
+curl -sS "https://prism-router-production.up.railway.app/health"
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H "content-type: application/json" \
   -d '{"model":"auto","messages":[{"role":"user","content":"ping"}]}'
 ```
 
-Update this doc (and the website sync) with the concrete host once it is stable. Do **not** set `OPENAI_API_BASE` on the Railway **service itself** to the Railway URL (or to `localhost:4000`) — that confuses LiteLLM when the gateway calls providers.
+Do **not** set `OPENAI_API_BASE` on the Railway **service itself** to the Railway URL (or to `localhost:4000`) — that confuses LiteLLM when the gateway calls providers.
 
 ## Required environment variables (names only)
 
