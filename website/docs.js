@@ -17,7 +17,7 @@
   const CATALOG = [
     { id: "README", title: "Index", file: "README.md" },
     { id: "USAGE", title: "Usage", file: "USAGE.md" },
-    { id: "ARCHITECTURE", title: "Architecture", file: "ARCHITECTURE.md" },
+    // Architecture hidden from docs UI nav (file kept in docs/)
     { id: "BENCHMARKS", title: "Benchmarks", file: "BENCHMARKS.md" },
     { id: "OPENCODE", title: "OpenCode", file: "OPENCODE.md" },
     { id: "HERMES", title: "Hermes", file: "HERMES.md" },
