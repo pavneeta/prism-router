@@ -454,7 +454,7 @@ def main() -> int:
     report = write_report(state, out_dir)
     # Copy anonymized aggregate into docs if live and substantial
     if not dry and state.tokens_used > 10_000:
-        docs_dir = ROOT / "docs" / "stress_runs"
+        docs_dir = ROOT / "docs" / "internal" / "stress_runs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         summary = docs_dir / f"{run_id}_summary.md"
         summary.write_text(report.read_text(encoding="utf-8"), encoding="utf-8")

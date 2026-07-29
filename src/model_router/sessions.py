@@ -142,10 +142,13 @@ class SessionStore:
     def _persist(self, rollup: SessionRollup) -> None:
         if self.rollup_path is None:
             return
-        self.rollup_path.parent.mkdir(parents=True, exist_ok=True)
-        # Rewrite as JSONL snapshot lines keyed by session (append latest)
-        with self.rollup_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(rollup.to_dict(), default=str) + "\n")
+        try:
+            self.rollup_path.parent.mkdir(parents=True, exist_ok=True)
+            # Append latest rollup snapshot (ephemeral FS may fail — ignore)
+            with self.rollup_path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(rollup.to_dict(), default=str) + "\n")
+        except OSError:
+            pass
 
 
 _default_sessions = SessionStore(rollup_path=Path("logs/session_rollups.jsonl"))

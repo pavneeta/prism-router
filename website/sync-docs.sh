@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Copy curated markdown from repo docs/ into website/docs-content/ for the docs UI.
+# Copy curated user/operator markdown from repo docs/ into website/docs-content/.
+# Does not sync docs/internal/ (GitHub-only eng docs).
 # Run from repo root or website/. Vercel buildCommand runs this before publish.
 set -euo pipefail
 
@@ -14,19 +15,32 @@ mkdir -p "$DEST"
 FILES=(
   README.md
   USAGE.md
-  ARCHITECTURE.md
   BENCHMARKS.md
   OPENCODE.md
   HERMES.md
   HOLMESGPT.md
-  HARNESS_BENCH.md
-  STRESS_BENCH.md
   TROUBLESHOOTING.md
   SECURITY.md
-  CI.md
   RAILWAY.md
-  AB_ANTHROPIC_VS_FIREWORKS.md
 )
+
+# Remove stale synced copies (e.g. former eng docs no longer in the catalog).
+shopt -s nullglob
+for existing in "$DEST"/*.md; do
+  base="$(basename "$existing")"
+  keep=0
+  for f in "${FILES[@]}"; do
+    if [[ "$base" == "$f" ]]; then
+      keep=1
+      break
+    fi
+  done
+  if [[ "$keep" -eq 0 ]]; then
+    rm -f "$existing"
+    echo "removed stale $base"
+  fi
+done
+shopt -u nullglob
 
 for f in "${FILES[@]}"; do
   if [[ -f "$SRC/$f" ]]; then
@@ -37,5 +51,4 @@ for f in "${FILES[@]}"; do
   fi
 done
 
-# Strip absolute marketing self-links noise is fine; keep files as-is.
 echo "docs-content ready → $DEST"

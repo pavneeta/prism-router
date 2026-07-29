@@ -103,6 +103,7 @@ def _content_from_response(response: Any) -> str | None:
 
 
 def append_mirror_record(path: Path, record: dict[str, Any]) -> None:
+    """Append mirror JSONL. Raises OSError on failure (caller logs and continues)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(record, default=str) + "\n"
     with _write_lock:

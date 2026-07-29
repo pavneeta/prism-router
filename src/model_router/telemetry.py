@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+
+from model_router.safety import redact_secrets
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,13 +42,30 @@ class TelemetryEvent:
 
 
 class TelemetryLogger:
+    """Append-only JSONL telemetry. Never raises — ephemeral FS / disk full must not crash requests."""
+
     def __init__(self, path: Path) -> None:
         self.path = path
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._ensure_parent()
+
+    def _ensure_parent(self) -> bool:
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            return True
+        except OSError as exc:
+            logger.warning("telemetry: cannot create dir %s: %s", self.path.parent, exc)
+            return False
 
     def emit(self, event: TelemetryEvent) -> None:
-        with self.path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(asdict(event), default=str) + "\n")
+        if event.error:
+            event.error = redact_secrets(event.error)
+        if not self._ensure_parent():
+            return
+        try:
+            with self.path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(asdict(event), default=str) + "\n")
+        except OSError as exc:
+            logger.warning("telemetry: write failed %s: %s", self.path, exc)
 
 
 def now_ts() -> float:

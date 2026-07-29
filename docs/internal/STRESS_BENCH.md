@@ -4,8 +4,8 @@ Calibrate Prism floors and OSS eligibility with a first-party scenario pack.
 
 ## Dataset
 
-- Pack: [`benchmarks/scenarios/v1/scenarios.jsonl`](../benchmarks/scenarios/v1/scenarios.jsonl)
-- Manifest: [`benchmarks/scenarios/v1/manifest.yaml`](../benchmarks/scenarios/v1/manifest.yaml)
+- Pack: [`benchmarks/scenarios/v1/scenarios.jsonl`](../../benchmarks/scenarios/v1/scenarios.jsonl)
+- Manifest: [`benchmarks/scenarios/v1/manifest.yaml`](../../benchmarks/scenarios/v1/manifest.yaml)
 - Regenerate: `python scripts/generate_stress_scenarios.py`
 
 50 scenarios across all 8 task types (`code_generation` … `general_chat`).
@@ -27,7 +27,7 @@ python scripts/stress_bench.py --live --token-budget 2800000
 
 Outputs under `logs/stress_bench/<run_id>/`: `results.jsonl`, `metrics.json`, `report.md`.
 
-Live aggregates (no secrets) can be copied to `docs/stress_runs/`.
+Live aggregates (no secrets) can be copied to `docs/internal/stress_runs/`.
 
 ## Models
 

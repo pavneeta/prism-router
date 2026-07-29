@@ -62,6 +62,6 @@ jobs:
             ## Summary
             ${{ steps.refresh.outputs.SUMMARY }}
 
-            See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and [docs/CI.md](docs/CI.md).
+            See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and [docs/internal/CI.md](docs/internal/CI.md).
           add-paths: |
             config/benchmarks.yaml

@@ -1,10 +1,16 @@
 from fastapi.testclient import TestClient
 
+from model_router.config import clear_config_caches, get_settings
 from model_router.gateway import app
+from model_router.prompt_cache import reset_prompt_cache_for_tests
 
 
-def test_anthropic_messages_dry_run(monkeypatch):
+def test_anthropic_messages_dry_run(monkeypatch, tmp_path):
     monkeypatch.setenv("MODEL_ROUTER_DRY_RUN", "true")
+    monkeypatch.setenv("MODEL_ROUTER_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
+    get_settings.cache_clear()
+    clear_config_caches()
+    reset_prompt_cache_for_tests()
     client = TestClient(app)
     resp = client.post(
         "/v1/messages",
@@ -23,8 +29,12 @@ def test_anthropic_messages_dry_run(monkeypatch):
     assert "model_router" in data
 
 
-def test_session_rollup_endpoint(monkeypatch):
+def test_session_rollup_endpoint(monkeypatch, tmp_path):
     monkeypatch.setenv("MODEL_ROUTER_DRY_RUN", "true")
+    monkeypatch.setenv("MODEL_ROUTER_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
+    get_settings.cache_clear()
+    clear_config_caches()
+    reset_prompt_cache_for_tests()
     client = TestClient(app)
     sid = "rollup-e2e"
     r1 = client.post(

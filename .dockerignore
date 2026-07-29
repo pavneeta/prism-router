@@ -2,15 +2,22 @@
 .git
 .github
 .env
+.env.*
+!.env.example
 logs
 **/__pycache__
 **/*.pyc
 .pytest_cache
 website
 .tmp-hallmark
+.tmp-railway
+.cursor
+.DS_Store
+benchmarks
 *.md
 !README.md
 tests
 scripts
 docs
 opencode.json
+Model router requirements.md

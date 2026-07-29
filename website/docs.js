@@ -13,22 +13,17 @@
   const RAW_BASE = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/docs/`;
   const GITHUB_BLOB = `https://github.com/${REPO}/blob/${BRANCH}/docs/`;
 
-  /** Curated nav (mirrors docs/README.md; excludes stress_runs internals). */
+  /** Curated nav — user/operator docs only (mirrors docs/README.md; excludes docs/internal/). */
   const CATALOG = [
     { id: "README", title: "Index", file: "README.md" },
     { id: "USAGE", title: "Usage", file: "USAGE.md" },
-    // Architecture hidden from docs UI nav (file kept in docs/)
     { id: "BENCHMARKS", title: "Benchmarks", file: "BENCHMARKS.md" },
     { id: "OPENCODE", title: "OpenCode", file: "OPENCODE.md" },
     { id: "HERMES", title: "Hermes", file: "HERMES.md" },
     { id: "HOLMESGPT", title: "HolmesGPT", file: "HOLMESGPT.md" },
-    { id: "HARNESS_BENCH", title: "Harness bench", file: "HARNESS_BENCH.md" },
-    { id: "STRESS_BENCH", title: "Stress bench", file: "STRESS_BENCH.md" },
     { id: "TROUBLESHOOTING", title: "Troubleshooting", file: "TROUBLESHOOTING.md" },
     { id: "SECURITY", title: "Security", file: "SECURITY.md" },
-    { id: "CI", title: "CI / release", file: "CI.md" },
     { id: "RAILWAY", title: "Railway deploy", file: "RAILWAY.md" },
-    { id: "AB_ANTHROPIC_VS_FIREWORKS", title: "A/B notes", file: "AB_ANTHROPIC_VS_FIREWORKS.md" },
   ];
 
   const navEl = document.getElementById("docs-nav");
@@ -106,6 +101,18 @@
     root.querySelectorAll("a[href]").forEach((a) => {
       const href = a.getAttribute("href") || "";
       if (/^https?:\/\//i.test(href) || href.startsWith("#") || href.startsWith("mailto:")) {
+        return;
+      }
+      // Internal eng docs stay on GitHub; rewrite relative paths to blob URLs.
+      const internalMatch = href.match(/^(?:\.\/)?internal\/(.+?)(?:#(.*))?$/i);
+      if (internalMatch) {
+        const frag = internalMatch[2] ? `#${internalMatch[2]}` : "";
+        a.setAttribute(
+          "href",
+          `${GITHUB_BLOB}internal/${internalMatch[1]}${frag}`
+        );
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener");
         return;
       }
       const match = href.match(/^(?:\.\/)?([\w.-]+)\.md(?:#(.*))?$/i);

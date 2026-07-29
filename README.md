@@ -96,11 +96,11 @@ Use model id `model-router/auto` or `auto`. Responses include a `model_router` b
 | **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
 | **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |
 | **[HolmesGPT](docs/HOLMESGPT.md)** | Point HolmesGPT (CNCF SRE agent) at Prism Router |
-| [Architecture](docs/ARCHITECTURE.md) | System design |
 | [Benchmarks](docs/BENCHMARKS.md) | Score provenance and task mapping |
-| [CI](docs/CI.md) | Pytest CI, monthly benchmarks, GHCR release |
 | [Security](docs/SECURITY.md) | Key rotation and secret handling |
-| [A/B notes](docs/AB_ANTHROPIC_VS_FIREWORKS.md) | Anthropic vs Fireworks session snapshot |
+| [Architecture](docs/internal/ARCHITECTURE.md) | System design (GitHub) |
+| [CI](docs/internal/CI.md) | Pytest CI, monthly benchmarks, GHCR release (GitHub) |
+| [A/B notes](docs/internal/AB_ANTHROPIC_VS_FIREWORKS.md) | Anthropic vs Fireworks session snapshot (GitHub) |
 
 ---
 
@@ -156,7 +156,7 @@ python scripts/cpt_routing_eval.py
 
 ## Benchmark refresh (CI)
 
-Monthly GitHub Action refreshes [`config/benchmarks.yaml`](config/benchmarks.yaml) from public leaderboards (DeepSWE JSON where available) and opens a PR. No provider API keys. See [docs/CI.md](docs/CI.md).
+Monthly GitHub Action refreshes [`config/benchmarks.yaml`](config/benchmarks.yaml) from public leaderboards (DeepSWE JSON where available) and opens a PR. No provider API keys. See [docs/internal/CI.md](docs/internal/CI.md).
 
 ```bash
 python scripts/update_benchmarks.py --dry-run -v

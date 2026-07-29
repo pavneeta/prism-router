@@ -1,6 +1,6 @@
 # Harness × provider benchmarking
 
-Script: [`scripts/harness_provider_bench.py`](../scripts/harness_provider_bench.py)
+Script: [`scripts/harness_provider_bench.py`](../../scripts/harness_provider_bench.py)
 
 Exercises **OpenCode**, **Hermes**, and **HolmesGPT** request shapes against:
 

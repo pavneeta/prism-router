@@ -10,12 +10,23 @@ The **API gateway** (FastAPI + LiteLLM) deploys on [Railway](https://railway.com
 export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
 # OpenAI-compatible clients: model auto  or  model-router/auto
 curl -sS "https://prism-router-production.up.railway.app/health"
+curl -sS "https://prism-router-production.up.railway.app/ready"
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H "content-type: application/json" \
   -d '{"model":"auto","messages":[{"role":"user","content":"ping"}]}'
 ```
 
-Do **not** set `OPENAI_API_BASE` on the Railway **service itself** to the Railway URL (or to `localhost:4000`) — that confuses LiteLLM when the gateway calls providers.
+Do **not** set `OPENAI_API_BASE` on the Railway **service itself** to the Railway URL (or to `localhost:4000`) — that confuses LiteLLM when the gateway calls providers. The process clears known self-referential bases on startup (`MODEL_ROUTER_PUBLIC_BASE` helps).
+
+## Production checklist
+
+1. **Replicas:** keep **1** Railway replica (or sticky sessions). Prompt-cache affinity and session task memory are **in-memory** and do not share across instances. Multi-replica without Redis → cold affinity per instance (routing still works).
+2. **Dry-run / mirror:** `MODEL_ROUTER_DRY_RUN=false`, `MODEL_ROUTER_MIRROR_MODE=false` unless intentionally shadow-evaling (~2× spend).
+3. **Provider keys only:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FIREWORKS_API_KEY` (+ optional Together/Groq). No client `OPENAI_API_BASE` on the service.
+4. **Telemetry path:** ephemeral FS — use `/tmp/model-router/telemetry.jsonl` (Dockerfile default). Writes fail soft; requests still succeed.
+5. **Health:** Railway `healthcheckPath=/health`; use `/ready` for config load checks.
+6. **Rate limits:** prefer Railway/edge limits; optional `MODEL_ROUTER_RATE_LIMIT_RPM` is in-process only (per replica).
+7. **CORS:** set `MODEL_ROUTER_CORS_ORIGINS` only if browser clients call the API (comma-list or `*`).
 
 ## Required environment variables (names only)
 
@@ -28,17 +39,19 @@ Set these as Railway **service variables** (never commit values):
 | `FIREWORKS_API_KEY` | Provider (or `FIREWORKS_AI_API_KEY`) |
 | `TOGETHER_API_KEY` / `GROQ_API_KEY` | Optional |
 | `MODEL_ROUTER_DRY_RUN` | `false` for live routing |
+| `MODEL_ROUTER_MIRROR_MODE` | `false` in production |
 | `MODEL_ROUTER_HOST` | `0.0.0.0` |
-| `MODEL_ROUTER_TELEMETRY_PATH` | e.g. `/tmp/telemetry.jsonl` (ephemeral FS) |
+| `MODEL_ROUTER_TELEMETRY_PATH` | e.g. `/tmp/model-router/telemetry.jsonl` |
 | `MODEL_ROUTER_CONFIG_DIR` | `/app/config` (Dockerfile default) |
+| `MODEL_ROUTER_PUBLIC_BASE` | Optional; production public URL (for self-base scrub) |
+| `MODEL_ROUTER_CORS_ORIGINS` | Optional allowlist or `*` |
+| `MODEL_ROUTER_RATE_LIMIT_RPM` | Optional in-process RPM; `0` = off |
 
-Railway injects `PORT`; the [`Dockerfile`](../Dockerfile) maps it to `MODEL_ROUTER_PORT`. Clear any self-referential `OPENAI_API_BASE` on the service.
-
-Optional: `MODEL_ROUTER_MIRROR_MODE` (keep `false` in production unless shadow-eval is intentional — ~2× spend).
+Railway injects `PORT`; the [`Dockerfile`](../Dockerfile) maps it to `MODEL_ROUTER_PORT`. Container runs as non-root `app` (uid 10001).
 
 ## Deploy overview
 
-Repo includes [`Dockerfile`](../Dockerfile) and [`railway.toml`](../railway.toml) (healthcheck on `/health`).
+Repo includes [`Dockerfile`](../Dockerfile) and [`railway.toml`](../railway.toml) (healthcheck on `/health`, restart on failure).
 
 Install the [Railway CLI](https://docs.railway.com/cli) (agent-aware install):
 
@@ -87,10 +100,16 @@ Smoke-test:
 
 ```bash
 curl -sS "https://<host>/health"
+curl -sS "https://<host>/ready"
 ```
+
+## Follow-ups
+
+- Shared Redis (or equivalent) for session affinity / local prompt cache across replicas.
+- Hard rate limits at the Railway edge / CDN in front of the public host.
 
 ## Related
 
 - Two paths (hosted + local): [USAGE.md](USAGE.md)
-- CI / GHCR / Vercel: [CI.md](CI.md)
+- CI / GHCR / Vercel: [CI.md](internal/CI.md)
 - Keys: [SECURITY.md](SECURITY.md)

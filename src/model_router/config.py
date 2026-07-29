@@ -17,16 +17,31 @@ class Settings(BaseSettings):
     model_router_telemetry_path: str = "logs/telemetry.jsonl"
     model_router_host: str = "0.0.0.0"
     model_router_port: int = 4000
+    # Production defaults: live routing, no shadow-eval double spend
     model_router_dry_run: bool = False
     # Shadow-eval: also run auto routing/completion alongside customer model
     model_router_mirror_mode: bool = False
     model_router_mirror_path: str = "logs/mirror.jsonl"
     model_router_mirror_judge: bool = False
     model_router_mirror_judge_model: str = "openai/gpt-4o-mini"
+    # Comma-separated CORS origins; empty = no CORS middleware; "*" = allow all
+    model_router_cors_origins: str = ""
+    # In-process requests/minute per client IP; 0 = disabled (prefer Railway/edge limits)
+    model_router_rate_limit_rpm: int = 0
+    # Optional public URL of this gateway — also cleared from provider *_API_BASE envs
+    model_router_public_base: str = ""
 
     @property
     def config_dir(self) -> Path:
         return Path(self.model_router_config_dir)
+
+    def cors_origin_list(self) -> list[str]:
+        raw = (self.model_router_cors_origins or "").strip()
+        if not raw:
+            return []
+        if raw == "*":
+            return ["*"]
+        return [o.strip() for o in raw.split(",") if o.strip()]
 
 
 class PolicyConfig(BaseModel):

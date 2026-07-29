@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -10,19 +11,31 @@ from typing import Any
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from model_router.classifier import Classification, classify_messages
-from model_router.config import get_selection_policy, get_settings, load_policy
+from model_router.config import (
+    get_selection_policy,
+    get_settings,
+    load_benchmarks,
+    load_models,
+    load_policy,
+)
 from model_router.litellm_backend import acompletion, apply_provider_cache_hints, completion_cost
 from model_router.mirror import schedule_mirror_eval, should_mirror
 from model_router.policy import RoutingDecision, estimate_input_tokens
 from model_router.prompt_cache import get_prompt_cache
+from model_router.rate_limit import get_rate_limiter
+from model_router.safety import redact_secrets
 from model_router.sessions import apply_session_classification, get_session_store
 from model_router.telemetry import TelemetryEvent, TelemetryLogger, now_ts
 
 load_dotenv()
+
+logger = logging.getLogger("model_router.gateway")
 
 
 def _clear_self_referential_provider_bases() -> None:
@@ -32,7 +45,16 @@ def _clear_self_referential_provider_bases() -> None:
     """
     import os
 
-    markers = ("127.0.0.1:4000", "localhost:4000", "0.0.0.0:4000")
+    markers = [
+        "127.0.0.1:4000",
+        "localhost:4000",
+        "0.0.0.0:4000",
+        "prism-router-production.up.railway.app",
+    ]
+    public = (os.environ.get("MODEL_ROUTER_PUBLIC_BASE") or "").strip().rstrip("/")
+    if public:
+        # Match host with or without scheme / trailing /v1
+        markers.append(public.removeprefix("https://").removeprefix("http://").split("/")[0])
     for var in (
         "OPENAI_API_BASE",
         "OPENAI_BASE_URL",
@@ -41,13 +63,104 @@ def _clear_self_referential_provider_bases() -> None:
         "FIREWORKS_API_BASE",
     ):
         val = os.environ.get(var, "")
-        if any(m in val for m in markers):
+        if any(m and m in val for m in markers):
             os.environ.pop(var, None)
+            logger.info("cleared self-referential %s", var)
 
 
 _clear_self_referential_provider_bases()
 
-app = FastAPI(title="Model-Router", version="0.1.0")
+app = FastAPI(title="Prism Router", version="0.2.0")
+
+
+def _openai_error(
+    message: str,
+    *,
+    status_code: int,
+    err_type: str = "invalid_request_error",
+    code: str | None = None,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": {
+                "message": redact_secrets(message) or message,
+                "type": err_type,
+                "param": None,
+                "code": code,
+            }
+        },
+    )
+
+
+@app.exception_handler(HTTPException)
+async def _http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    detail = exc.detail
+    if not isinstance(detail, str):
+        detail = json.dumps(detail, default=str)
+    err_type = "invalid_request_error" if exc.status_code < 500 else "server_error"
+    if exc.status_code == 429:
+        err_type = "rate_limit_error"
+    elif exc.status_code == 502:
+        err_type = "upstream_error"
+    return _openai_error(detail, status_code=exc.status_code, err_type=err_type)
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    logger.exception("unhandled error")
+    return _openai_error(
+        "internal server error",
+        status_code=500,
+        err_type="server_error",
+        code="internal_error",
+    )
+
+
+class _RateLimitMiddleware(BaseHTTPMiddleware):
+    """In-process RPM limiter; skipped for health/ready probes."""
+
+    _SKIP = {"/health", "/ready"}
+
+    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+        if request.url.path in self._SKIP:
+            return await call_next(request)
+        settings = get_settings()
+        limiter = get_rate_limiter()
+        limiter.configure(settings.model_router_rate_limit_rpm)
+        if settings.model_router_rate_limit_rpm <= 0:
+            return await call_next(request)
+        client = request.client.host if request.client else "unknown"
+        if not limiter.allow(client):
+            return _openai_error(
+                f"Rate limit exceeded ({settings.model_router_rate_limit_rpm} rpm). "
+                "Retry later or raise MODEL_ROUTER_RATE_LIMIT_RPM.",
+                status_code=429,
+                err_type="rate_limit_error",
+                code="rate_limit_exceeded",
+            )
+        return await call_next(request)
+
+
+def _configure_app_middleware() -> None:
+    """Wire middleware without calling get_settings() (avoids caching Settings at import)."""
+    import os
+
+    raw = (os.environ.get("MODEL_ROUTER_CORS_ORIGINS") or "").strip()
+    if raw:
+        origins = ["*"] if raw == "*" else [o.strip() for o in raw.split(",") if o.strip()]
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["x-request-id"],
+        )
+    app.add_middleware(_RateLimitMiddleware)
+
+
+_configure_app_middleware()
 
 
 class ChatMessage(BaseModel):
@@ -311,6 +424,7 @@ def _completion_kwargs(body: ChatCompletionRequest, litellm_model: str | None = 
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
+    """Liveness — process is up. Does not validate config or providers."""
     import os
 
     settings = get_settings()
@@ -325,6 +439,43 @@ async def health() -> dict[str, Any]:
             "fireworks": bool(os.getenv("FIREWORKS_API_KEY")),
         },
     }
+
+
+@app.get("/ready")
+async def ready() -> JSONResponse:
+    """Readiness — config YAML loads. Does not validate provider key values."""
+    try:
+        policy = load_policy()
+        benches = load_benchmarks()
+        models = load_models()
+        settings = get_settings()
+        return JSONResponse(
+            {
+                "status": "ready",
+                "config": {
+                    "policy": True,
+                    "benchmarks": len(benches.models),
+                    "deployments": len(models.deployments),
+                    "prompt_cache_enabled": policy.prompt_cache_enabled,
+                },
+                "dry_run": settings.model_router_dry_run,
+                "mirror_mode": settings.model_router_mirror_mode,
+                # In-memory cache/affinity — not shared across replicas
+                "session_store": "in_memory",
+                "note": (
+                    "Run a single Railway replica (or sticky sessions) so prompt-cache "
+                    "affinity stays consistent; multi-replica without shared store "
+                    "degrades to cold routing per instance."
+                ),
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        return _openai_error(
+            f"config not ready: {exc}",
+            status_code=503,
+            err_type="server_error",
+            code="not_ready",
+        )
 
 
 @app.get("/v1/router/sessions/{session_id}")
@@ -507,9 +658,14 @@ async def _stream_completion(
         yield "data: [DONE]\n\n"
     except Exception as exc:  # noqa: BLE001
         status = "error"
-        error = str(exc)
+        error = redact_secrets(str(exc))
         err_payload = {
-            "error": {"message": str(exc), "type": "model_router_stream_error"},
+            "error": {
+                "message": error or "stream error",
+                "type": "upstream_error",
+                "param": None,
+                "code": "stream_error",
+            },
         }
         yield f"data: {json.dumps(err_payload)}\n\n"
         yield "data: [DONE]\n\n"
@@ -754,6 +910,7 @@ async def chat_completions(
         error = None
     except Exception as exc:  # noqa: BLE001 — surface provider errors to client
         latency_ms = (time.perf_counter() - started) * 1000
+        safe_err = redact_secrets(str(exc)) or "upstream error"
         _emit(
             request_id=request_id,
             session_id=x_session_id,
@@ -765,9 +922,9 @@ async def chat_completions(
             route_mode=route_mode,
             latency_ms=latency_ms,
             status="error",
-            error=str(exc),
+            error=safe_err,
         )
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(status_code=502, detail=safe_err) from exc
 
     latency_ms = (time.perf_counter() - started) * 1000
     usage = getattr(response, "usage", None)
@@ -911,7 +1068,14 @@ def main() -> None:
         os.environ["MODEL_ROUTER_PORT"] = str(args.port)
 
     get_settings.cache_clear()
+    _clear_self_referential_provider_bases()
     settings = get_settings()
+    if settings.model_router_dry_run:
+        logger.warning("MODEL_ROUTER_DRY_RUN=true — provider calls skipped")
+    if settings.model_router_mirror_mode:
+        logger.warning(
+            "MODEL_ROUTER_MIRROR_MODE=true — shadow completions roughly double spend"
+        )
     uvicorn.run(
         "model_router.gateway:app",
         host=settings.model_router_host,

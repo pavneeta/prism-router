@@ -1,5 +1,7 @@
 # Documentation index
 
+User / operator guides (also rendered on the marketing site `/docs`):
+
 | Doc | Contents |
 | --- | --- |
 | [USAGE.md](USAGE.md) | Hosted API (Railway) + local install, API, sessions, streaming |
@@ -8,14 +10,25 @@
 | [OPENCODE.md](OPENCODE.md) | OpenCode harness |
 | [HERMES.md](HERMES.md) | Hermes Agent harness |
 | [HOLMESGPT.md](HOLMESGPT.md) | HolmesGPT (CNCF SRE agent) harness |
-| [HARNESS_BENCH.md](HARNESS_BENCH.md) | Cross-harness × provider bench |
-| [STRESS_BENCH.md](STRESS_BENCH.md) | 50-scenario multi-provider stress bench |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System design |
 | [BENCHMARKS.md](BENCHMARKS.md) | Score provenance |
-| [CI.md](CI.md) | Pytest, monthly scrapers, GHCR, Vercel |
 | [RAILWAY.md](RAILWAY.md) | Deploy API gateway on Railway |
-| [AB_ANTHROPIC_VS_FIREWORKS.md](AB_ANTHROPIC_VS_FIREWORKS.md) | A/B session notes |
+
+<details>
+<summary>Internal (GitHub only)</summary>
+
+Engineering docs live under [`docs/internal/`](internal/) and are **not** synced to the public docs UI:
+
+| Doc | Contents |
+| --- | --- |
+| [ARCHITECTURE.md](internal/ARCHITECTURE.md) | System design |
+| [CI.md](internal/CI.md) | Pytest, monthly scrapers, GHCR, Vercel |
+| [HARNESS_BENCH.md](internal/HARNESS_BENCH.md) | Cross-harness × provider bench |
+| [STRESS_BENCH.md](internal/STRESS_BENCH.md) | 50-scenario multi-provider stress bench |
+| [AB_ANTHROPIC_VS_FIREWORKS.md](internal/AB_ANTHROPIC_VS_FIREWORKS.md) | A/B session notes |
+| [stress_runs/](internal/stress_runs/) | Stress bench aggregates |
+
+</details>
 
 **Site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) · **Docs UI:** [https://prism-router-ten.vercel.app/docs](https://prism-router-ten.vercel.app/docs) · **Repo:** [pavneeta/prism-router](https://github.com/pavneeta/prism-router)
 
-The marketing site docs page (`/docs`) renders these files. Content is synced into `website/docs-content/` at deploy time (`website/sync-docs.sh`) so the private repo still serves docs on Vercel.
+The marketing site docs page (`/docs`) renders **user docs only**. Content is synced into `website/docs-content/` at deploy time (`website/sync-docs.sh`). Contributors: put eng-facing writeups in `docs/internal/`.

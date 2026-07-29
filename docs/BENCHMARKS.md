@@ -38,10 +38,10 @@ Missing sources are skipped (no silent zeros). Models with no score for a task a
 
 ## First-party stress calibration
 
-Use [`docs/STRESS_BENCH.md`](STRESS_BENCH.md) (`scripts/stress_bench.py`) to measure pass rates on 50 internal scenarios across OpenAI / Anthropic / OSS and feed floor reviews.
+Use [`docs/internal/STRESS_BENCH.md`](internal/STRESS_BENCH.md) (`scripts/stress_bench.py`) to measure pass rates on 50 internal scenarios across OpenAI / Anthropic / OSS and feed floor reviews.
 
-- Dry-run wiring: [`docs/stress_runs/20260728T144931Z_dry_summary.md`](stress_runs/20260728T144931Z_dry_summary.md)
-- Live burn (router, 2026-07-28): [`docs/stress_runs/20260728T172948Z_summary.md`](stress_runs/20260728T172948Z_summary.md)
+- Dry-run wiring: [`docs/internal/stress_runs/20260728T144931Z_dry_summary.md`](internal/stress_runs/20260728T144931Z_dry_summary.md)
+- Live burn (router, 2026-07-28): [`docs/internal/stress_runs/20260728T172948Z_summary.md`](internal/stress_runs/20260728T172948Z_summary.md)
 
 SWE-bench and DeepSWE scores depend on agent harness + effort. Prefer **mini-swe-agent** / published DeepSWE rows for fair LM comparison. Third-party SWE tables can disagree sharply (e.g. Llama 4 Maverick) — we prefer official DeepSWE + AA + Terminal-Bench when present, and mark SWE rows with `note` when harness is unclear.
 
@@ -59,7 +59,7 @@ Re-pull leaderboards when:
 
 ### Automated monthly update
 
-GitHub Actions runs [`scripts/update_benchmarks.py`](../scripts/update_benchmarks.py) on a monthly cron (`0 6 1 * *` UTC) and on `workflow_dispatch`. Best-effort public scrapes (DeepSWE live JSON today; other sources stubbed until stable public endpoints exist) update matching rows in [`config/benchmarks.yaml`](../config/benchmarks.yaml) and open a PR. No provider API secrets are required. Details: [CI.md](CI.md).
+GitHub Actions runs [`scripts/update_benchmarks.py`](../scripts/update_benchmarks.py) on a monthly cron (`0 6 1 * *` UTC) and on `workflow_dispatch`. Best-effort public scrapes (DeepSWE live JSON today; other sources stubbed until stable public endpoints exist) update matching rows in [`config/benchmarks.yaml`](../config/benchmarks.yaml) and open a PR. No provider API secrets are required. Details: [CI.md](internal/CI.md).
 
 ```bash
 python scripts/update_benchmarks.py --dry-run -v

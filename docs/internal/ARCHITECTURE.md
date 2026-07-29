@@ -8,7 +8,7 @@ An **intelligence-aware, cache-aware inference router** that selects the best op
 
 **North-star metric:** reduce $/task completion vs always routing to a frontier (or oversized) model — counting **prompt-cache savings**, not just list $/token.
 
-**Initial intelligence seed:** public scores from **DeepSWE**, **SWE-bench Verified**, **Terminal-Bench v2.1**, **Artificial Analysis Intelligence Index**, and **Arena AI** — see [BENCHMARKS.md](BENCHMARKS.md).
+**Initial intelligence seed:** public scores from **DeepSWE**, **SWE-bench Verified**, **Terminal-Bench v2.1**, **Artificial Analysis Intelligence Index**, and **Arena AI** — see [BENCHMARKS.md](../BENCHMARKS.md).
 
 ---
 
@@ -113,7 +113,7 @@ Per `(model_id, task_type)`:
 | `source` | `seed` \| `eval_suite` \| `online` |
 | `updated_at` | Freshness |
 
-MVP: YAML/JSON seed file sourced from public leaderboards ([BENCHMARKS.md](BENCHMARKS.md)). Later: SQLite/Postgres + online updates from anonymized outcomes.
+MVP: YAML/JSON seed file sourced from public leaderboards ([BENCHMARKS.md](../BENCHMARKS.md)). Later: SQLite/Postgres + online updates from anonymized outcomes.
 
 **Intelligence floor:** policy config `min_accuracy_by_task` (global default + per-task overrides). Operator can tighten floors for agent harness SLAs.
 
@@ -268,7 +268,7 @@ We can later expose our policy as a LiteLLM `CustomRoutingStrategy` / routing pl
 ## Repository layout (target)
 
 ```text
-docs/ARCHITECTURE.md          # this document
+docs/internal/ARCHITECTURE.md # this document
 Model router requirements.md  # product requirements
 README.md
 pyproject.toml
