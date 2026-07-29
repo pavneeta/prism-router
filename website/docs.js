@@ -27,6 +27,7 @@
     { id: "TROUBLESHOOTING", title: "Troubleshooting", file: "TROUBLESHOOTING.md" },
     { id: "SECURITY", title: "Security", file: "SECURITY.md" },
     { id: "CI", title: "CI / release", file: "CI.md" },
+    { id: "RAILWAY", title: "Railway deploy", file: "RAILWAY.md" },
     { id: "AB_ANTHROPIC_VS_FIREWORKS", title: "A/B notes", file: "AB_ANTHROPIC_VS_FIREWORKS.md" },
   ];
 

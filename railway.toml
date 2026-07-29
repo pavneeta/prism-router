@@ -1,0 +1,12 @@
+# Prism Router API on Railway — Dockerfile build from repo root.
+# Marketing site stays on Vercel (website/). See docs/RAILWAY.md.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

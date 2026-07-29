@@ -13,6 +13,7 @@
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design |
 | [BENCHMARKS.md](BENCHMARKS.md) | Score provenance |
 | [CI.md](CI.md) | Pytest, monthly scrapers, GHCR, Vercel |
+| [RAILWAY.md](RAILWAY.md) | Deploy API gateway on Railway |
 | [AB_ANTHROPIC_VS_FIREWORKS.md](AB_ANTHROPIC_VS_FIREWORKS.md) | A/B session notes |
 
 **Site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) · **Docs UI:** [https://prism-router-ten.vercel.app/docs](https://prism-router-ten.vercel.app/docs) · **Repo:** [pavneeta/prism-router](https://github.com/pavneeta/prism-router)

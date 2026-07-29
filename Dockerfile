@@ -20,4 +20,5 @@ COPY config ./config
 RUN pip install --no-cache-dir .
 
 EXPOSE 4000
-CMD ["model-router"]
+# Railway (and similar hosts) inject PORT; fall back to 4000 locally.
+CMD ["sh", "-c", "export MODEL_ROUTER_PORT=\"${PORT:-${MODEL_ROUTER_PORT:-4000}}\"; exec model-router"]
