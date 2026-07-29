@@ -8,7 +8,8 @@ Prism Router sits in front of your model providers (via [LiteLLM](https://github
 
 Repo: [github.com/pavneeta/prism-router](https://github.com/pavneeta/prism-router)
 
-**Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
+**Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)  
+**Hosted API:** [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) (`…/v1`)
 
 ---
 
@@ -39,6 +40,24 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 
 ## Quick start
 
+### Option A — Hosted API (Railway)
+
+```bash
+export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
+
+curl -sS "$OPENAI_API_BASE/chat/completions" \
+  -H 'Content-Type: application/json' \
+  -H 'X-Session-Id: demo-1' \
+  -d '{
+    "model": "auto",
+    "messages": [{"role": "user", "content": "Write a Python hello world."}]
+  }' | python -m json.tool
+```
+
+Deploy details: [docs/RAILWAY.md](docs/RAILWAY.md). Full guide: [docs/USAGE.md](docs/USAGE.md).
+
+### Option B — Run locally
+
 ```bash
 git clone https://github.com/pavneeta/prism-router.git
 cd prism-router   # or Model-Router
@@ -47,27 +66,18 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 # Add provider keys to .env (see below)
-```
-
-### Run the gateway
-
-```bash
-# Live (calls providers)
-model-router
-# → http://127.0.0.1:4000
+model-router           # http://127.0.0.1:4000
 
 # Dry-run (routing only, no provider spend)
-MODEL_ROUTER_DRY_RUN=true model-router
+# MODEL_ROUTER_DRY_RUN=true model-router
 ```
-
-### First request
 
 ```bash
 curl -s http://127.0.0.1:4000/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: demo-1' \
   -d '{
-    "model": "model-router/auto",
+    "model": "auto",
     "messages": [{"role": "user", "content": "Write a Python hello world."}]
   }' | python -m json.tool
 ```
@@ -80,7 +90,8 @@ Use model id `model-router/auto` or `auto`. Responses include a `model_router` b
 
 | Doc | Contents |
 | --- | --- |
-| **[Usage guide](docs/USAGE.md)** | Install, config, API, routing, caching, telemetry |
+| **[Usage guide](docs/USAGE.md)** | Hosted API + local install, config, API, telemetry |
+| **[Railway deploy](docs/RAILWAY.md)** | Production gateway URL, env vars, deploy |
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common errors and fixes |
 | **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
 | **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |

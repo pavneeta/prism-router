@@ -46,12 +46,12 @@
             An intelligence-aware, cache-aware model router that picks the right open-source model for each task from public benchmarks — minimizing cost without sacrificing intelligence or task accuracy.
           </p>
           <div class="hero__cta">
-            <a class="btn btn--primary" href="https://github.com/pavneeta/prism-router">
-              <span>View on GitHub</span>
+            <a class="btn btn--primary" href="#start">
+              <span>Try the API</span>
               <span aria-hidden="true">→</span>
             </a>
-            <a class="btn btn--ghost" href="docs?doc=USAGE">
-              Read the docs
+            <a class="btn btn--ghost" href="https://github.com/pavneeta/prism-router">
+              GitHub
             </a>
           </div>
         </div>
@@ -158,21 +158,26 @@
           <article class="harness">
             <h3 class="harness__name">OpenCode</h3>
             <p class="harness__body">
-              Use the in-repo <code>opencode.json</code> or point your OpenAI-compatible provider at Prism Router.
+              Point your OpenAI-compatible provider at
+              <code>https://prism-router-production.up.railway.app/v1</code>
+              · model <code>auto</code>.
             </p>
             <a class="harness__link" href="docs?doc=OPENCODE">docs/OPENCODE.md →</a>
           </article>
           <article class="harness">
             <h3 class="harness__name">Hermes Agent</h3>
             <p class="harness__body">
-              Custom provider · <code>base_url: http://127.0.0.1:4000/v1</code> · model <code>auto</code>.
+              Custom provider ·
+              <code>base_url: https://prism-router-production.up.railway.app/v1</code>
+              · model <code>auto</code>.
             </p>
             <a class="harness__link" href="docs?doc=HERMES">docs/HERMES.md →</a>
           </article>
           <article class="harness">
             <h3 class="harness__name">HolmesGPT</h3>
             <p class="harness__body">
-              <code>OPENAI_API_BASE</code> → Prism · model <code>openai/auto</code> · function calling required.
+              <code>OPENAI_API_BASE=https://prism-router-production.up.railway.app/v1</code>
+              · model <code>openai/auto</code> · function calling required.
             </p>
             <a class="harness__link" href="docs?doc=HOLMESGPT">docs/HOLMESGPT.md →</a>
           </article>
@@ -183,17 +188,18 @@
         <div class="quick__grid">
           <header class="section-head section-head--flush reveal">
             <p class="section-eyebrow"><span class="num tnum">03</span> · Quick start</p>
-            <h2 class="section-h" id="start-h">Running in minutes.</h2>
+            <h2 class="section-h" id="start-h">Call the hosted API.</h2>
             <p class="section-lede">
-              Clone, add provider keys, start the gateway. Dry-run mode routes without provider spend.
+              Point any OpenAI-compatible client at the production gateway.
+              Set <code class="inline-code">OPENAI_API_BASE</code> and use model <code class="inline-code">auto</code>.
             </p>
             <div class="hero__cta hero__cta--spaced">
-              <a class="btn btn--primary" href="https://github.com/pavneeta/prism-router">
-                <span>Clone the repo</span>
+              <a class="btn btn--primary" href="docs?doc=USAGE">
+                <span>Try the API</span>
                 <span aria-hidden="true">→</span>
               </a>
-              <a class="btn btn--ghost" href="docs?doc=USAGE">
-                Full usage guide
+              <a class="btn btn--ghost" href="docs?doc=RAILWAY">
+                Railway docs
               </a>
             </div>
           </header>
@@ -204,19 +210,21 @@
                 <span>request.json</span>
                 <span class="code-panel__chip tnum">200 OK</span>
               </div>
-              <pre><code><span class="c"># curl → :4000/v1/chat/completions</span>
+              <pre><code><span class="c"># curl → https://prism-router-production.up.railway.app/v1/chat/completions</span>
 {
-  <span class="k">"model"</span>: <span class="s" id="typed-line">"model-router/auto"</span>,
+  <span class="k">"model"</span>: <span class="s" id="typed-line">"auto"</span>,
   <span class="k">"messages"</span>: [{
     <span class="k">"role"</span>: <span class="s">"user"</span>,
     <span class="k">"content"</span>: <span class="s">"Write a Python hello world."</span>
   }]
 }
+<span class="c"># OPENAI_API_BASE=https://prism-router-production.up.railway.app/v1</span>
 <span class="c"># Header: X-Session-Id: demo-1</span></code></pre>
             </div>
 
             <nav class="doc-links" aria-label="Documentation">
               <a href="docs?doc=USAGE">Usage</a>
+              <a href="docs?doc=RAILWAY">Railway</a>
               <a href="docs?doc=BENCHMARKS">Benchmarks</a>
               <a href="docs?doc=TROUBLESHOOTING">Troubleshooting</a>
             </nav>

@@ -91,6 +91,6 @@ curl -sS "https://<host>/health"
 
 ## Related
 
-- Local usage: [USAGE.md](USAGE.md)
+- Two paths (hosted + local): [USAGE.md](USAGE.md)
 - CI / GHCR / Vercel: [CI.md](CI.md)
 - Keys: [SECURITY.md](SECURITY.md)

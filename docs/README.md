@@ -2,7 +2,7 @@
 
 | Doc | Contents |
 | --- | --- |
-| [USAGE.md](USAGE.md) | Install, API, sessions, streaming, Fireworks thinking knob |
+| [USAGE.md](USAGE.md) | Hosted API (Railway) + local install, API, sessions, streaming |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common errors + Fireworks CoT hide settings |
 | [SECURITY.md](SECURITY.md) | Key rotation |
 | [OPENCODE.md](OPENCODE.md) | OpenCode harness |

@@ -1,14 +1,40 @@
 # Usage guide
 
-Install, configure, and call **Prism Router**. See also [OPENCODE.md](OPENCODE.md), [HERMES.md](HERMES.md), [HOLMESGPT.md](HOLMESGPT.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [SECURITY.md](SECURITY.md), [CI.md](CI.md), [RAILWAY.md](RAILWAY.md).
+Two ways to use **Prism Router**. See also [RAILWAY.md](RAILWAY.md), [OPENCODE.md](OPENCODE.md), [HERMES.md](HERMES.md), [HOLMESGPT.md](HOLMESGPT.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [SECURITY.md](SECURITY.md), [CI.md](CI.md).
 
 **Live marketing site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) · **Docs:** [https://prism-router-ten.vercel.app/docs](https://prism-router-ten.vercel.app/docs)
 
-### Hosted API (Railway)
+---
 
-Production gateway deploy steps, public `OPENAI_API_BASE`, and env var **names** are in [RAILWAY.md](RAILWAY.md). Marketing/docs remain on Vercel; only the FastAPI service runs on Railway.
+## Option A — Hosted API (Railway)
 
-## Install & run
+Use the production gateway. No clone required. Point any OpenAI-compatible client at:
+
+| | |
+| --- | --- |
+| **Gateway** | [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) |
+| **API base** | `https://prism-router-production.up.railway.app/v1` |
+| **Model** | `auto` or `model-router/auto` |
+
+```bash
+export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
+
+curl -sS "$OPENAI_API_BASE/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: demo-1" \
+  -d '{
+    "model": "auto",
+    "messages": [{"role": "user", "content": "Write a Python hello world."}]
+  }' | python -m json.tool
+```
+
+Deploy steps, env var **names**, and Railway CLI notes: **[RAILWAY.md](RAILWAY.md)**. Marketing/docs stay on Vercel; only the FastAPI service runs on Railway.
+
+---
+
+## Option B — Run locally
+
+Clone the repo, add provider keys, and run the gateway on your machine.
 
 ```bash
 git clone https://github.com/pavneeta/prism-router.git
@@ -17,6 +43,18 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env   # add provider keys — never commit .env
 model-router           # http://127.0.0.1:4000
+```
+
+```bash
+export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+
+curl -sS "$OPENAI_API_BASE/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: demo-1" \
+  -d '{
+    "model": "auto",
+    "messages": [{"role": "user", "content": "Write a Python hello world."}]
+  }' | python -m json.tool
 ```
 
 Dry-run (routing only, no provider spend):
@@ -46,6 +84,8 @@ model-router --mirror-mode --mirror-judge
 - Summarize later: `python scripts/mirror_summary.py`
 
 **Cost:** each mirrored request can be ~2× provider spend (+ judge ≈ 3×). Keep off in production unless evaluating.
+
+---
 
 ## API
 
@@ -95,9 +135,10 @@ Reasoning models on Fireworks can dump chain-of-thought into visible `content`. 
 - Mirror shadow-eval JSONL: `MODEL_ROUTER_MIRROR_PATH` (default `logs/mirror.jsonl`) when `--mirror-mode` is on
 - Per-session rollups: `logs/session_rollups.jsonl` + HTTP `GET /v1/router/sessions/{id}`
 - Offline CPT-style distribution: `python scripts/cpt_routing_eval.py`
+
 ## Smoke tests
 
 ```bash
 pytest
-python scripts/hermes_smoke.py   # gateway must be up on :4000
+python scripts/hermes_smoke.py   # local gateway must be up on :4000
 ```
