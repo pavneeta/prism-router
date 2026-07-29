@@ -41,20 +41,38 @@ Optional: `MODEL_ROUTER_MIRROR_MODE` (keep `false` in production unless shadow-e
 
 Repo includes [`Dockerfile`](../Dockerfile) and [`railway.toml`](../railway.toml) (healthcheck on `/health`).
 
-```bash
-# Account/workspace token from Railway → Account → Tokens
-export RAILWAY_TOKEN=...   # CLI env only — never commit
+Install the [Railway CLI](https://docs.railway.com/cli) (agent-aware install):
 
-railway login   # or rely on RAILWAY_TOKEN
-railway init    # once: create/link project + service (e.g. prism-router)
+```bash
+curl -fsSL agents.railway.com | sh
+source "$HOME/.railway/env"   # or restart the shell
+railway whoami
+```
+
+Auth options:
+
+| Method | When |
+| --- | --- |
+| `railway login` | Interactive / local |
+| `RAILWAY_API_TOKEN` | Account/workspace token (CI or agents) |
+| `RAILWAY_TOKEN` | **Project** token (scoped to one project) |
+
+```bash
+# Prefer account token for first-time project create:
+export RAILWAY_API_TOKEN=...   # Railway → Account → Tokens — never commit
+
+cd /path/to/prism-router
+railway init -n prism-router   # once: create/link project
+railway add                    # or use existing service
 railway variables set MODEL_ROUTER_DRY_RUN=false MODEL_ROUTER_HOST=0.0.0.0
 # set provider keys from a local .env without echoing:
 #   railway variables set OPENAI_API_KEY=... ANTHROPIC_API_KEY=... FIREWORKS_API_KEY=...
 
 railway up --detach
-# Generate a public domain in the Railway dashboard (Networking → Public Networking)
-# or: railway domain
+railway domain                 # generate public *.up.railway.app host
 ```
+
+You can also ask the Railway agent after CLI setup: `railway agent -p "Deploy this Dockerfile service and expose /health"`.
 
 Prefer building from the repo Dockerfile on `main`. Alternatively pull the GHCR image from tag `v*` (`ghcr.io/pavneeta/prism-router:latest`) if you configure an image-based service instead of a GitHub build.
 
