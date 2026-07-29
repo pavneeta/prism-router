@@ -1,5 +1,10 @@
 name: Deploy website
 
+# Optional GitHub Pages mirror. Production marketing is on Vercel
+# (https://prism-router-ten.vercel.app). This job only runs when Pages is
+# already enabled for the repo — otherwise configure-pages fails with
+# "Resource not accessible by integration" and paints every website push red.
+
 on:
   push:
     branches: [main]
@@ -18,7 +23,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-pages:
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages")
+          if [ "$code" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "GitHub Pages is configured."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages is not enabled (HTTP $code). Skipping Pages deploy. Production site: Vercel (website/ root)."
+          fi
+
   github-pages:
+    needs: check-pages
+    if: needs.check-pages.outputs.enabled == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -26,8 +54,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: website

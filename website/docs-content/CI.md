@@ -54,4 +54,6 @@ On `v*` tags (or manual dispatch), builds the [`Dockerfile`](../Dockerfile) and 
 ## Website
 
 - Production: [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) (Vercel project `prism-router`, Root Directory `website`)
-- Optional GitHub Pages: [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) (enable Pages → GitHub Actions in repo settings)
+- Docs UI: [https://prism-router-ten.vercel.app/docs](https://prism-router-ten.vercel.app/docs) — markdown is synced via `website/sync-docs.sh` into `website/docs-content/` (also the Vercel `buildCommand`)
+- Redeploy marketing: `cd website && npx vercel@latest --prod` (GitHub→Vercel auto-deploy may lag; push alone does not always refresh production)
+- Optional GitHub Pages: [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) skips unless Pages is already enabled in repo settings (Settings → Pages → GitHub Actions). Without that, the old workflow failed every `website/**` push with `Resource not accessible by integration`.
