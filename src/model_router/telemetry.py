@@ -30,6 +30,7 @@ class TelemetryEvent:
     cost_delta_vs_frontier_usd: float
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
+    cached_tokens: int | None = None
     actual_cost_usd: float | None = None
     latency_ms: float | None = None
     status: str = "ok"
