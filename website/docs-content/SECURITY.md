@@ -18,9 +18,11 @@ If a key was pasted into chat, email, or a ticket: **revoke it and create a new 
 ## Checklist after rotation
 
 1. Revoke old keys in each provider console
-2. Put new values in `.env` (never commit)
-3. Restart the gateway: `model-router`
-4. Smoke: `curl http://127.0.0.1:4000/health` and a short `/v1/chat/completions` call
+2. Put new values in `.env` (never commit) or Railway service variables
+3. Restart the gateway: `model-router` (or redeploy Railway)
+4. Smoke: `curl …/health`, `curl …/ready`, and a short `/v1/chat/completions` call
+
+Telemetry and error strings redact common `sk-` / `sk-ant-` / `fw_` / Bearer shapes. Still never log raw keys.
 
 ## CI secrets
 

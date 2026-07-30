@@ -6,9 +6,9 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "Model-Router",
       "options": {
-        "baseURL": "http://127.0.0.1:4000/v1",
+        "baseURL": "https://prism-router-production.up.railway.app/v1",
         "apiKey": "unused",
-        "streaming": false,
+        "streaming": true,
         "headers": {
           "X-Session-Id": "opencode-local"
         }
