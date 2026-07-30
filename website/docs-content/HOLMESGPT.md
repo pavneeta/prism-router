@@ -103,7 +103,7 @@ Expect a `tool_use_agent` (or related) classification and an eligible tool-capab
 | Model id | Prefer `openai/auto` from Holmes; Prism also accepts `auto` / `model-router/auto` |
 | Auth | Real provider keys on Prism only; Holmes `OPENAI_API_KEY=none` is fine |
 | Tools | Must be supported end-to-end; Prism forwards `tools` / `tool_choice` to LiteLLM |
-| Streaming | Supported on `/v1/chat/completions` |
+| Streaming | Supported on `/v1/chat/completions` (`stream: true` → OpenAI SSE). Prefer that path if Holmes streams. |
 | Docs upstream | [OpenAI-Compatible](https://holmesgpt.dev/latest/ai-providers/openai-compatible/) |
 
 Troubleshooting: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

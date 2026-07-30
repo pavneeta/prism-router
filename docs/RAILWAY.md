@@ -14,9 +14,10 @@ curl -sS "https://prism-router-production.up.railway.app/ready"
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H "content-type: application/json" \
   -d '{"model":"auto","messages":[{"role":"user","content":"ping"}]}'
+# Streaming (SSE): add "stream": true and use curl -N
 ```
 
-Do **not** set `OPENAI_API_BASE` on the Railway **service itself** to the Railway URL (or to `localhost:4000`) — that confuses LiteLLM when the gateway calls providers. The process clears known self-referential bases on startup (`MODEL_ROUTER_PUBLIC_BASE` helps).
+Streaming (`stream: true` on `/v1/chat/completions`) works on Railway the same as locally. Affinity remains per-replica (see checklist).
 
 ## Production checklist
 

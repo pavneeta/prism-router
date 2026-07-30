@@ -113,7 +113,30 @@ Fireworks tip: provider `cached_tokens` show up reliably on multi-turn / identic
 
 ### Streaming
 
-`POST /v1/chat/completions` with `"stream": true` returns OpenAI-style SSE. Anthropic `/v1/messages` streaming is not implemented yet — use chat completions for streams.
+OpenAI-compatible streaming is supported on chat completions. Send `"stream": true`; the gateway returns `text/event-stream` (SSE) with OpenAI-style `data:` chunks and a terminal `data: [DONE]`.
+
+```bash
+curl -N -sS "$OPENAI_API_BASE/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: demo-stream" \
+  -d '{
+    "model": "auto",
+    "stream": true,
+    "messages": [{"role": "user", "content": "Count to three."}]
+  }'
+```
+
+Works for both **auto** (`auto` / `model-router/auto`) and **passthrough** (explicit provider model ids). Clients such as the OpenAI SDK (`stream=True`), OpenCode, Hermes, and HolmesGPT can enable streaming the same way.
+
+**Caveats**
+
+| Topic | Behavior |
+| --- | --- |
+| Anthropic `/v1/messages` | Streaming is **not** implemented (`stream: true` → `400`). Use `/v1/chat/completions` for SSE. |
+| Local exact-match cache | Bypassed when `stream: true` (non-stream only). |
+| Mirror mode | Shadow auto-eval is skipped for streamed requests. |
+| Dry-run | Returns synthetic SSE (`[dry-run] …`) so clients can exercise `stream: true` without provider spend. |
+| Railway replicas | Streaming works with multiple replicas; session affinity / prompt-cache stickiness remains in-memory per process (same as non-stream). |
 
 ## Config
 

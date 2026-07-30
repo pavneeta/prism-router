@@ -29,6 +29,29 @@ def test_anthropic_messages_dry_run(monkeypatch, tmp_path):
     assert "model_router" in data
 
 
+def test_anthropic_messages_stream_rejected(monkeypatch, tmp_path):
+    monkeypatch.setenv("MODEL_ROUTER_DRY_RUN", "true")
+    monkeypatch.setenv("MODEL_ROUTER_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
+    get_settings.cache_clear()
+    clear_config_caches()
+    reset_prompt_cache_for_tests()
+    client = TestClient(app)
+    resp = client.post(
+        "/v1/messages",
+        json={
+            "model": "auto",
+            "max_tokens": 64,
+            "stream": True,
+            "messages": [{"role": "user", "content": "Say hi"}],
+        },
+    )
+    assert resp.status_code == 400
+    payload = resp.json()
+    message = str((payload.get("error") or {}).get("message") or payload.get("detail") or "")
+    assert "streaming" in message.lower()
+    assert "chat/completions" in message
+
+
 def test_session_rollup_endpoint(monkeypatch, tmp_path):
     monkeypatch.setenv("MODEL_ROUTER_DRY_RUN", "true")
     monkeypatch.setenv("MODEL_ROUTER_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
