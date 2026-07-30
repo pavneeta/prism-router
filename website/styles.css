@@ -126,6 +126,28 @@ a:focus-visible {
   flex-wrap: wrap;
 }
 
+.nav-term__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.nav-term__mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  line-height: 0;
+  border-radius: var(--radius-sm);
+  outline-offset: 3px;
+}
+
+.nav-term__mark img {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
 .nav-term__line {
   margin: 0;
   font-family: var(--font-mono);
@@ -204,6 +226,9 @@ a:focus-visible {
 }
 
 .hero__brand {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
   font-family: var(--font-display);
   font-size: clamp(1.35rem, 2.5vw + 0.5rem, 2rem);
   font-weight: 700;
@@ -211,6 +236,18 @@ a:focus-visible {
   color: var(--color-ink);
   margin: 0 0 var(--space-lg);
   line-height: var(--leading-tight);
+}
+
+.hero__brand-mark {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-top: 0.1rem;
+}
+
+.hero__brand-text {
+  display: block;
+  min-width: 0;
 }
 
 .hero__brand-sub {

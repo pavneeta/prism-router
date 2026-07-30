@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Prism Router">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1418"/>
+      <stop offset="55%" stop-color="#0d1a20"/>
+      <stop offset="100%" stop-color="#122028"/>
+    </linearGradient>
+    <linearGradient id="beam-in" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5ec8d4" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#5ec8d4" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="fan" x1="0" y1="0" x2="1" y2="0.35">
+      <stop offset="0%" stop-color="#4ec4d4"/>
+      <stop offset="25%" stop-color="#5fd48a"/>
+      <stop offset="50%" stop-color="#e0c84a"/>
+      <stop offset="75%" stop-color="#e89a4a"/>
+      <stop offset="100%" stop-color="#e05a4a"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#2a3a44" stop-opacity="0.65"/>
+      <stop offset="50%" stop-color="#3a4e58" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#1a2830" stop-opacity="0.7"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="72%" cy="48%" r="35%">
+      <stop offset="0%" stop-color="#5ec8d4" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#5ec8d4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- subtle grid -->
+  <g stroke="#1e2e38" stroke-width="1" opacity="0.45">
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+  </g>
+
+  <!-- copy -->
+  <text x="72" y="230" fill="#f2f6f8" font-family="Syne, Arial Narrow, Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="-1.5">Prism Router</text>
+  <text x="72" y="300" fill="#9aadb8" font-family="IBM Plex Sans, Segoe UI, Arial, sans-serif" font-size="28" font-weight="400">Intelligence-aware · cache-aware model routing</text>
+  <text x="72" y="360" fill="#6a7f8c" font-family="JetBrains Mono, ui-monospace, monospace" font-size="18" letter-spacing="1.5">THE RIGHT MODEL FOR THE TASK</text>
+
+  <!-- prism apparatus (scaled/positioned) -->
+  <g transform="translate(700, 95) scale(1.35)">
+    <g stroke="#3a4a54" stroke-width="1" opacity="0.7">
+      <line x1="24" y1="280" x2="296" y2="280"/>
+      <line x1="24" y1="276" x2="24" y2="284"/>
+      <line x1="96" y1="276" x2="96" y2="284"/>
+      <line x1="168" y1="276" x2="168" y2="284"/>
+      <line x1="240" y1="276" x2="240" y2="284"/>
+      <line x1="296" y1="276" x2="296" y2="284"/>
+    </g>
+    <rect x="8" y="148" width="92" height="3" fill="url(#beam-in)"/>
+    <polygon points="108,86 210,160 108,234" fill="url(#glass)" stroke="#5ec8d4" stroke-opacity="0.55" stroke-width="1.5"/>
+    <polygon points="118,110 188,160 118,210" fill="#5ec8d4" fill-opacity="0.06" stroke="#f0f4f6" stroke-opacity="0.15" stroke-width="1"/>
+    <g opacity="0.95">
+      <path d="M210 160 L304 118" stroke="#4ec4d4" stroke-width="2.5"/>
+      <path d="M210 160 L304 138" stroke="#5fd48a" stroke-width="2.5"/>
+      <path d="M210 160 L304 158" stroke="#e0c84a" stroke-width="2.5"/>
+      <path d="M210 160 L304 178" stroke="#e89a4a" stroke-width="2.5"/>
+      <path d="M210 160 L304 198" stroke="#e05a4a" stroke-width="2.5"/>
+    </g>
+    <path d="M210 148 L298 112 L298 204 L210 172 Z" fill="url(#fan)" opacity="0.22"/>
+    <circle cx="108" cy="160" r="3.5" fill="#5ec8d4"/>
+    <circle cx="210" cy="160" r="3.5" fill="#e0b85a"/>
+  </g>
+</svg>
