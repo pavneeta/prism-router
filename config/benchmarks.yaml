@@ -1,7 +1,7 @@
 # Initial intelligence seed from public leaderboards (see docs/BENCHMARKS.md).
 # snapshot: DeepSWE 2026-07-25; AA / Terminal-Bench / Arena ~2026-07
 schema_version: 1
-snapshot_date: "2026-07-28"
+snapshot_date: "2026-08-01"
 sources_docs: docs/BENCHMARKS.md
 
 # Raw source keys (optional per model):
