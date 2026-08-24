@@ -13,6 +13,7 @@ curl -sS "https://prism-router-production.up.railway.app/health"
 curl -sS "https://prism-router-production.up.railway.app/ready"
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H "content-type: application/json" \
+  -H "Authorization: Bearer ${OPENAI_API_KEY:-unused}" \
   -d '{"model":"auto","messages":[{"role":"user","content":"ping"}]}'
 # Streaming (SSE): add "stream": true and use curl -N
 ```
@@ -21,13 +22,14 @@ Streaming (`stream: true` on `/v1/chat/completions`) works on Railway the same a
 
 ## Production checklist
 
-1. **Replicas:** production runs **2** Railway replicas behind the same public URL (`prism-router-production.up.railway.app`). Railway does **not** guarantee sticky sessions — prompt-cache affinity and session task memory are **in-memory per process**, so cache/affinity may miss when a request lands on the other replica (routing still works). Shared Redis (or equivalent) is the follow-up for cross-replica affinity.
-2. **Dry-run / mirror:** `MODEL_ROUTER_DRY_RUN=false`, `MODEL_ROUTER_MIRROR_MODE=false` unless intentionally shadow-evaling (~2× spend).
-3. **Provider keys only:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FIREWORKS_API_KEY` (+ optional Together/Groq). No client `OPENAI_API_BASE` on the service.
-4. **Telemetry path:** ephemeral FS — use `/tmp/model-router/telemetry.jsonl` (Dockerfile default). Writes fail soft; requests still succeed.
-5. **Health:** Railway `healthcheckPath=/health`; use `/ready` for config load checks.
-6. **Rate limits:** prefer Railway/edge limits; optional `MODEL_ROUTER_RATE_LIMIT_RPM` is in-process only (per replica).
-7. **CORS:** set `MODEL_ROUTER_CORS_ORIGINS` only if browser clients call the API (comma-list or `*`).
+1. **Client auth (required for public URLs):** set `MODEL_ROUTER_API_KEYS` to one or more random client keys. Without this, anyone can spend your provider budget. Clients send `Authorization: Bearer …` or `X-Api-Key`.
+2. **Replicas:** production runs **2** Railway replicas behind the same public URL (`prism-router-production.up.railway.app`). Railway does **not** guarantee sticky sessions — prompt-cache affinity and session task memory are **in-memory per process**, so cache/affinity may miss when a request lands on the other replica (routing still works). Shared Redis (or equivalent) is the follow-up for cross-replica affinity.
+3. **Dry-run / mirror:** `MODEL_ROUTER_DRY_RUN=false`, `MODEL_ROUTER_MIRROR_MODE=false` unless intentionally shadow-evaling (~2× spend).
+4. **Provider keys only on the service:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FIREWORKS_API_KEY` (+ optional Together/Groq). Do **not** set client `OPENAI_API_BASE` on the Railway service to its own URL.
+5. **Telemetry path:** ephemeral FS — use `/tmp/model-router/telemetry.jsonl` (Dockerfile default). Writes fail soft; requests still succeed.
+6. **Health:** Railway `healthcheckPath=/health`; use `/ready` for config load checks.
+7. **Rate limits:** prefer Railway/edge limits; optional `MODEL_ROUTER_RATE_LIMIT_RPM` is in-process only (per replica).
+8. **CORS:** set `MODEL_ROUTER_CORS_ORIGINS` only if browser clients call the API (comma-list or `*`).
 
 ## Required environment variables (names only)
 
@@ -35,6 +37,7 @@ Set these as Railway **service variables** (never commit values):
 
 | Variable | Notes |
 | --- | --- |
+| `MODEL_ROUTER_API_KEYS` | **Client** keys (comma-separated). Set on public deploys |
 | `OPENAI_API_KEY` | Provider |
 | `ANTHROPIC_API_KEY` | Provider |
 | `FIREWORKS_API_KEY` | Provider (or `FIREWORKS_AI_API_KEY`) |

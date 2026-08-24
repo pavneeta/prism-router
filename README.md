@@ -9,7 +9,9 @@ Prism Router sits in front of your model providers (via [LiteLLM](https://github
 Repo: [github.com/pavneeta/prism-router](https://github.com/pavneeta/prism-router)
 
 **Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)  
-**Hosted API:** [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) (`…/v1`)
+**Hosted API (demo):** [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) (`…/v1`) — requires a client API key when the operator enables `MODEL_ROUTER_API_KEYS` (recommended for any public deploy).
+
+License: **Apache-2.0** · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ---
 
@@ -42,11 +44,15 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 
 ### Option A — Hosted API (Railway)
 
+Point any OpenAI-compatible client at the demo gateway. If the operator set `MODEL_ROUTER_API_KEYS`, pass the key as `Authorization: Bearer …` or `X-Api-Key`.
+
 ```bash
 export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
+# export OPENAI_API_KEY="your-prism-client-key"   # when MODEL_ROUTER_API_KEYS is enabled
 
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer ${OPENAI_API_KEY:-unused}" \
   -H 'X-Session-Id: demo-1' \
   -d '{
     "model": "auto",
@@ -54,7 +60,7 @@ curl -sS "$OPENAI_API_BASE/chat/completions" \
   }' | python -m json.tool
 ```
 
-Deploy details: [docs/RAILWAY.md](docs/RAILWAY.md). Full guide: [docs/USAGE.md](docs/USAGE.md).
+Self-hosting is the primary path for production workloads you control. Deploy details: [docs/RAILWAY.md](docs/RAILWAY.md). Full guide: [docs/USAGE.md](docs/USAGE.md).
 
 ### Option B — Run locally
 
@@ -98,6 +104,7 @@ Use model id `model-router/auto` or `auto`. Responses include a `model_router` b
 | **[HolmesGPT](docs/HOLMESGPT.md)** | Point HolmesGPT (CNCF SRE agent) at Prism Router |
 | [Benchmarks](docs/BENCHMARKS.md) | Score provenance and task mapping |
 | [Security](docs/SECURITY.md) | Key rotation and secret handling |
+| [Contributing](CONTRIBUTING.md) | Dev setup and PR expectations |
 | [Architecture](docs/internal/ARCHITECTURE.md) | System design (GitHub) |
 | [CI](docs/internal/CI.md) | Pytest CI, monthly benchmarks, GHCR release (GitHub) |
 | [A/B notes](docs/internal/AB_ANTHROPIC_VS_FIREWORKS.md) | Anthropic vs Fireworks session snapshot (GitHub) |
@@ -106,7 +113,16 @@ Use model id `model-router/auto` or `auto`. Responses include a `model_router` b
 
 ## Provider keys (gateway-side)
 
-Put keys in **`.env`** (gitignored). Never commit them. Never put them in harness config if the gateway already holds them. If a key was ever pasted into chat, **rotate it** ([SECURITY.md](docs/SECURITY.md)).
+Put **provider** keys in **`.env`** (gitignored) or host secrets. Never commit them. Never put them in harness config if the gateway already holds them. If a key was ever pasted into chat, **rotate it** ([SECURITY.md](SECURITY.md) / [docs/SECURITY.md](docs/SECURITY.md)).
+
+For **internet-facing** gateways, also set **client** keys:
+
+```bash
+MODEL_ROUTER_API_KEYS=pr_your_long_random_client_key
+MODEL_ROUTER_RATE_LIMIT_RPM=60
+```
+
+Clients then send `Authorization: Bearer …` or `X-Api-Key` (OpenAI-compatible).
 
 ```bash
 FIREWORKS_API_KEY=...
@@ -166,4 +182,4 @@ python scripts/update_benchmarks.py --dry-run -v
 
 ## License
 
-See the repository `LICENSE` file.
+Apache License 2.0 — see [`LICENSE`](LICENSE).

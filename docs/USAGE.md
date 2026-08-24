@@ -8,19 +8,22 @@ Two ways to use **Prism Router**. See also [RAILWAY.md](RAILWAY.md), [OPENCODE.m
 
 ## Option A — Hosted API (Railway)
 
-Use the production gateway. No clone required. Point any OpenAI-compatible client at:
+Use the production gateway (demo). Point any OpenAI-compatible client at:
 
 | | |
 | --- | --- |
 | **Gateway** | [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) |
 | **API base** | `https://prism-router-production.up.railway.app/v1` |
 | **Model** | `auto` or `model-router/auto` |
+| **Client auth** | If `MODEL_ROUTER_API_KEYS` is set on the gateway, pass `Authorization: Bearer <key>` or `X-Api-Key` |
 
 ```bash
 export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
+# export OPENAI_API_KEY="your-prism-client-key"  # when client auth is enabled
 
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${OPENAI_API_KEY:-unused}" \
   -H "X-Session-Id: demo-1" \
   -d '{
     "model": "auto",
@@ -28,7 +31,7 @@ curl -sS "$OPENAI_API_BASE/chat/completions" \
   }' | python -m json.tool
 ```
 
-Deploy steps, env var **names**, and Railway CLI notes: **[RAILWAY.md](RAILWAY.md)**. Marketing/docs stay on Vercel; only the FastAPI service runs on Railway.
+Deploy steps, env var **names**, and Railway CLI notes: **[RAILWAY.md](RAILWAY.md)**. Marketing/docs stay on Vercel; only the FastAPI service runs on Railway. For your own production traffic, prefer self-hosting (Option B or your own Railway project) with `MODEL_ROUTER_API_KEYS` set.
 
 ---
 
