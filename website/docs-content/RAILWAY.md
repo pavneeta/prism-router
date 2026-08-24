@@ -4,13 +4,13 @@ The **API gateway** (FastAPI + LiteLLM) deploys on [Railway](https://railway.com
 
 ## Public base URL
 
-**Production:** [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app)
+After `railway domain` (or your custom domain), use your service hostname:
 
 ```bash
-export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
+export OPENAI_API_BASE="https://<your-service>.up.railway.app/v1"
 # OpenAI-compatible clients: model auto  or  model-router/auto
-curl -sS "https://prism-router-production.up.railway.app/health"
-curl -sS "https://prism-router-production.up.railway.app/ready"
+curl -sS "https://<your-service>.up.railway.app/health"
+curl -sS "https://<your-service>.up.railway.app/ready"
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H "content-type: application/json" \
   -H "Authorization: Bearer ${OPENAI_API_KEY:-unused}" \
@@ -23,7 +23,7 @@ Streaming (`stream: true` on `/v1/chat/completions`) works on Railway the same a
 ## Production checklist
 
 1. **Client auth (required for public URLs):** set `MODEL_ROUTER_API_KEYS` to one or more random client keys. Without this, anyone can spend your provider budget. Clients send `Authorization: Bearer …` or `X-Api-Key`.
-2. **Replicas:** production runs **2** Railway replicas behind the same public URL (`prism-router-production.up.railway.app`). Railway does **not** guarantee sticky sessions — prompt-cache affinity and session task memory are **in-memory per process**, so cache/affinity may miss when a request lands on the other replica (routing still works). Shared Redis (or equivalent) is the follow-up for cross-replica affinity.
+2. **Replicas:** optional multi-replica behind one public URL (`railway.toml`). Railway does **not** guarantee sticky sessions — prompt-cache affinity and session task memory are **in-memory per process**, so cache/affinity may miss across replicas (routing still works). Shared Redis (or equivalent) is the follow-up for cross-replica affinity.
 3. **Dry-run / mirror:** `MODEL_ROUTER_DRY_RUN=false`, `MODEL_ROUTER_MIRROR_MODE=false` unless intentionally shadow-evaling (~2× spend).
 4. **Provider keys only on the service:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FIREWORKS_API_KEY` (+ optional Together/Groq). Do **not** set client `OPENAI_API_BASE` on the Railway service to its own URL.
 5. **Telemetry path:** ephemeral FS — use `/tmp/model-router/telemetry.jsonl` (Dockerfile default). Writes fail soft; requests still succeed.

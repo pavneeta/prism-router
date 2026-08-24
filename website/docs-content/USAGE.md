@@ -1,41 +1,12 @@
 # Usage guide
 
-Two ways to use **Prism Router**. See also [RAILWAY.md](RAILWAY.md), [OPENCODE.md](OPENCODE.md), [HERMES.md](HERMES.md), [HOLMESGPT.md](HOLMESGPT.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [SECURITY.md](SECURITY.md).
+Run **Prism Router** locally or deploy your own container. See also [RAILWAY.md](RAILWAY.md), [OPENCODE.md](OPENCODE.md), [HERMES.md](HERMES.md), [HOLMESGPT.md](HOLMESGPT.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md), [SECURITY.md](SECURITY.md).
 
 **Live marketing site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) · **Docs:** [https://prism-router-ten.vercel.app/docs](https://prism-router-ten.vercel.app/docs)
 
 ---
 
-## Option A — Hosted API (Railway)
-
-Use the production gateway (demo). Point any OpenAI-compatible client at:
-
-| | |
-| --- | --- |
-| **Gateway** | [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) |
-| **API base** | `https://prism-router-production.up.railway.app/v1` |
-| **Model** | `auto` or `model-router/auto` |
-| **Client auth** | If `MODEL_ROUTER_API_KEYS` is set on the gateway, pass `Authorization: Bearer <key>` or `X-Api-Key` |
-
-```bash
-export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
-# export OPENAI_API_KEY="your-prism-client-key"  # when client auth is enabled
-
-curl -sS "$OPENAI_API_BASE/chat/completions" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${OPENAI_API_KEY:-unused}" \
-  -H "X-Session-Id: demo-1" \
-  -d '{
-    "model": "auto",
-    "messages": [{"role": "user", "content": "Write a Python hello world."}]
-  }' | python -m json.tool
-```
-
-Deploy steps, env var **names**, and Railway CLI notes: **[RAILWAY.md](RAILWAY.md)**. Marketing/docs stay on Vercel; only the FastAPI service runs on Railway. For your own production traffic, prefer self-hosting (Option B or your own Railway project) with `MODEL_ROUTER_API_KEYS` set.
-
----
-
-## Option B — Run locally
+## Run locally
 
 Clone the repo, add provider keys, and run the gateway on your machine.
 
@@ -48,6 +19,13 @@ cp .env.example .env   # add provider keys — never commit .env
 model-router           # http://127.0.0.1:4000
 ```
 
+| | |
+| --- | --- |
+| **Gateway** | `http://127.0.0.1:4000` |
+| **API base** | `http://127.0.0.1:4000/v1` |
+| **Model** | `auto` or `model-router/auto` |
+| **Client auth** | Optional: set `MODEL_ROUTER_API_KEYS` and pass `Authorization: Bearer <key>` or `X-Api-Key` |
+
 ```bash
 export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
 
@@ -59,6 +37,12 @@ curl -sS "$OPENAI_API_BASE/chat/completions" \
     "messages": [{"role": "user", "content": "Write a Python hello world."}]
   }' | python -m json.tool
 ```
+
+Deploy your own host with Docker / **[RAILWAY.md](RAILWAY.md)** (or any container platform). On any public URL, set `MODEL_ROUTER_API_KEYS`.
+
+---
+
+## Config & environment
 
 Dry-run (routing only, no provider spend):
 

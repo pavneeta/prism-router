@@ -8,8 +8,7 @@ Prism Router sits in front of your model providers (via [LiteLLM](https://github
 
 Repo: [github.com/pavneeta/prism-router](https://github.com/pavneeta/prism-router)
 
-**Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)  
-**Hosted API (demo):** [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) (`…/v1`) — requires a client API key when the operator enables `MODEL_ROUTER_API_KEYS` (recommended for any public deploy).
+**Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
 
 License: **Apache-2.0** · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
@@ -42,31 +41,11 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 
 ## Quick start
 
-### Option A — Hosted API (Railway)
-
-Point any OpenAI-compatible client at the demo gateway. If the operator set `MODEL_ROUTER_API_KEYS`, pass the key as `Authorization: Bearer …` or `X-Api-Key`.
-
-```bash
-export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
-# export OPENAI_API_KEY="your-prism-client-key"   # when MODEL_ROUTER_API_KEYS is enabled
-
-curl -sS "$OPENAI_API_BASE/chat/completions" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer ${OPENAI_API_KEY:-unused}" \
-  -H 'X-Session-Id: demo-1' \
-  -d '{
-    "model": "auto",
-    "messages": [{"role": "user", "content": "Write a Python hello world."}]
-  }' | python -m json.tool
-```
-
-Self-hosting is the primary path for production workloads you control. Deploy details: [docs/RAILWAY.md](docs/RAILWAY.md). Full guide: [docs/USAGE.md](docs/USAGE.md).
-
-### Option B — Run locally
+### Run locally
 
 ```bash
 git clone https://github.com/pavneeta/prism-router.git
-cd prism-router   # or Model-Router
+cd prism-router
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -79,7 +58,9 @@ model-router           # http://127.0.0.1:4000
 ```
 
 ```bash
-curl -s http://127.0.0.1:4000/v1/chat/completions \
+export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+
+curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: demo-1' \
   -d '{
@@ -90,14 +71,16 @@ curl -s http://127.0.0.1:4000/v1/chat/completions \
 
 Use model id `model-router/auto` or `auto`. Responses include a `model_router` block with classification and the selected model.
 
+Deploy your own gateway with Docker / [Railway](docs/RAILWAY.md) (or any container host). Set `MODEL_ROUTER_API_KEYS` on any internet-facing deploy. Full guide: [docs/USAGE.md](docs/USAGE.md).
+
 ---
 
 ## Documentation
 
 | Doc | Contents |
 | --- | --- |
-| **[Usage guide](docs/USAGE.md)** | Hosted API + local install, config, API, telemetry |
-| **[Railway deploy](docs/RAILWAY.md)** | Production gateway URL, env vars, deploy |
+| **[Usage guide](docs/USAGE.md)** | Local install, config, API, telemetry |
+| **[Deploy (Railway)](docs/RAILWAY.md)** | Container deploy, env vars, replicas |
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common errors and fixes |
 | **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
 | **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |

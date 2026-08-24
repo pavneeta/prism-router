@@ -179,7 +179,7 @@
             <h3 class="harness__name">OpenCode</h3>
             <p class="harness__body">
               Point your OpenAI-compatible provider at
-              <code>https://prism-router-production.up.railway.app/v1</code>
+              <code>http://127.0.0.1:4000/v1</code>
               · model <code>auto</code>.
             </p>
             <a class="harness__link" href="docs?doc=OPENCODE">docs/OPENCODE.md →</a>
@@ -188,7 +188,7 @@
             <h3 class="harness__name">Hermes Agent</h3>
             <p class="harness__body">
               Custom provider ·
-              <code>base_url: https://prism-router-production.up.railway.app/v1</code>
+              <code>base_url: http://127.0.0.1:4000/v1</code>
               · model <code>auto</code>.
             </p>
             <a class="harness__link" href="docs?doc=HERMES">docs/HERMES.md →</a>
@@ -196,7 +196,7 @@
           <article class="harness">
             <h3 class="harness__name">HolmesGPT</h3>
             <p class="harness__body">
-              <code>OPENAI_API_BASE=https://prism-router-production.up.railway.app/v1</code>
+              <code>OPENAI_API_BASE=http://127.0.0.1:4000/v1</code>
               · model <code>openai/auto</code> · function calling required.
             </p>
             <a class="harness__link" href="docs?doc=HOLMESGPT">docs/HOLMESGPT.md →</a>
@@ -208,18 +208,19 @@
         <div class="quick__grid">
           <header class="section-head section-head--flush reveal">
             <p class="section-eyebrow"><span class="num tnum">03</span> · Quick start</p>
-            <h2 class="section-h" id="start-h">Call the hosted API.</h2>
+            <h2 class="section-h" id="start-h">Run the gateway locally.</h2>
             <p class="section-lede">
-              Point any OpenAI-compatible client at the production gateway.
-              Set <code class="inline-code">OPENAI_API_BASE</code> and use model <code class="inline-code">auto</code>.
+              Point any OpenAI-compatible client at
+              <code class="inline-code">http://127.0.0.1:4000/v1</code>
+              and use model <code class="inline-code">auto</code>.
             </p>
             <div class="hero__cta hero__cta--spaced">
               <a class="btn btn--primary" href="docs?doc=USAGE">
-                <span>Try the API</span>
+                <span>Usage guide</span>
                 <span aria-hidden="true">→</span>
               </a>
               <a class="btn btn--ghost" href="docs?doc=RAILWAY">
-                Railway docs
+                Deploy docs
               </a>
             </div>
           </header>
@@ -230,7 +231,7 @@
                 <span>request.json</span>
                 <span class="code-panel__chip tnum">200 OK</span>
               </div>
-              <pre><code><span class="c"># curl → https://prism-router-production.up.railway.app/v1/chat/completions</span>
+              <pre><code><span class="c"># curl → http://127.0.0.1:4000/v1/chat/completions</span>
 {
   <span class="k">"model"</span>: <span class="s" id="typed-line">"auto"</span>,
   <span class="k">"messages"</span>: [{
@@ -238,13 +239,13 @@
     <span class="k">"content"</span>: <span class="s">"Write a Python hello world."</span>
   }]
 }
-<span class="c"># OPENAI_API_BASE=https://prism-router-production.up.railway.app/v1</span>
+<span class="c"># OPENAI_API_BASE=http://127.0.0.1:4000/v1</span>
 <span class="c"># Header: X-Session-Id: demo-1</span></code></pre>
             </div>
 
             <nav class="doc-links" aria-label="Documentation">
               <a href="docs?doc=USAGE">Usage</a>
-              <a href="docs?doc=RAILWAY">Railway</a>
+              <a href="docs?doc=RAILWAY">Deploy</a>
               <a href="docs?doc=BENCHMARKS">Benchmarks</a>
               <a href="docs?doc=TROUBLESHOOTING">Troubleshooting</a>
             </nav>

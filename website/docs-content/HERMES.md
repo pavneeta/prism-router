@@ -8,12 +8,11 @@ Point [Nous Hermes](https://hermes-agent.nousresearch.com/) at Prism Router via 
 model:
   default: auto
   provider: custom
-  base_url: https://prism-router-production.up.railway.app/v1
-  # Local: http://127.0.0.1:4000/v1
+  base_url: http://127.0.0.1:4000/v1
   api_key: unused
 ```
 
-Provider API keys stay on the **gateway** `.env`.
+Provider API keys stay on the **gateway** `.env`. For a deployed gateway, use your service `/v1` URL instead.
 
 ## Smoke
 

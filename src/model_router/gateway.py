@@ -49,7 +49,6 @@ def _clear_self_referential_provider_bases() -> None:
         "127.0.0.1:4000",
         "localhost:4000",
         "0.0.0.0:4000",
-        "prism-router-production.up.railway.app",
     ]
     public = (os.environ.get("MODEL_ROUTER_PUBLIC_BASE") or "").strip().rstrip("/")
     if public:
