@@ -1,7 +1,7 @@
 # Initial intelligence seed from public leaderboards (see docs/BENCHMARKS.md).
 # snapshot: DeepSWE 2026-07-25; AA / Terminal-Bench / Arena ~2026-07
 schema_version: 1
-snapshot_date: "2026-07-28"
+snapshot_date: "2026-09-01"
 sources_docs: docs/BENCHMARKS.md
 
 # Raw source keys (optional per model):
@@ -55,7 +55,7 @@ models:
       swe_bench_verified: 0.886
       terminal_bench_v2_1: 0.891
       aa_intelligence_index: 61
-      arena_elo: 1495
+      arena_elo: 1492
     notes: "DeepSWE claude-opus-5[max] 73.6%; AA Index leader 61; SWE-bench ~88.6% (Opus 4.8/5 class)"
 
   anthropic/claude-sonnet-5:
@@ -112,7 +112,7 @@ models:
       deepswe: 0.685
       terminal_bench_v2_1: 0.883
       aa_intelligence_index: 57
-      arena_elo: 1486
+      arena_elo: 1489
     notes: "Fireworks Standard $3/$0.30/$15; DeepSWE 68.5% (~tie Fable); AA 57; Arena Frontend Code #1"
 
   zai/glm-5.2:
