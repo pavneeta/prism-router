@@ -4,10 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "model-router"
-version = "0.2.0"
+version = "0.2.1"
 description = "Intelligence-aware AI inference router that picks the right model per task"
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
+authors = [{ name = "Pavneet Ahluwalia" }]
+keywords = ["llm", "routing", "litellm", "openai-compatible", "prompt-cache"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
@@ -24,6 +35,12 @@ dev = [
   "pytest>=8.3.0",
   "pytest-asyncio>=0.24.0",
 ]
+
+[project.urls]
+Homepage = "https://prism-router-ten.vercel.app"
+Documentation = "https://prism-router-ten.vercel.app/docs"
+Repository = "https://github.com/pavneeta/prism-router"
+Issues = "https://github.com/pavneeta/prism-router/issues"
 
 [project.scripts]
 model-router = "model_router.gateway:main"

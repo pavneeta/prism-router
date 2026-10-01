@@ -4,7 +4,7 @@ User / operator guides (also rendered on the marketing site `/docs`):
 
 | Doc | Contents |
 | --- | --- |
-| [USAGE.md](USAGE.md) | Hosted API (Railway) + local install, API, sessions, streaming |
+| [USAGE.md](USAGE.md) | Local install, API, sessions, streaming |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common errors + Fireworks CoT hide settings |
 | [SECURITY.md](SECURITY.md) | Key rotation |
 | [OPENCODE.md](OPENCODE.md) | OpenCode harness |
@@ -25,6 +25,8 @@ Engineering docs live under [`docs/internal/`](internal/) and are **not** synced
 | [HARNESS_BENCH.md](internal/HARNESS_BENCH.md) | Cross-harness × provider bench |
 | [STRESS_BENCH.md](internal/STRESS_BENCH.md) | 50-scenario multi-provider stress bench |
 | [AB_ANTHROPIC_VS_FIREWORKS.md](internal/AB_ANTHROPIC_VS_FIREWORKS.md) | A/B session notes |
+| [OPEN_SOURCE.md](internal/OPEN_SOURCE.md) | Checklist before making the GitHub repo public |
+| [REQUIREMENTS.md](internal/REQUIREMENTS.md) | Original product requirements notes |
 | [stress_runs/](internal/stress_runs/) | Stress bench aggregates |
 
 </details>

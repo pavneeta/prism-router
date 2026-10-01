@@ -5,6 +5,8 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .env
+.env.*
+!.env.example
 logs/
 *.egg-info/
 dist/
@@ -15,5 +17,13 @@ build/
 website/.vercel/
 website/.hallmark/
 .tmp-hallmark/
-
 .tmp-railway/
+
+# Local stress / mirror artifacts (summaries under docs/internal/stress_runs may be committed)
+**/results.jsonl
+**/metrics.json
+logs/cpt_*.txt
+
+# Private ops fork only — never push to public prism-router
+docs/private/
+PRIVATE_README.md

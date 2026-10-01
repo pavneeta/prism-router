@@ -14,15 +14,15 @@ Provider API keys live on the **gateway** (`.env`), not in OpenCode.
 
 ## Prerequisites
 
-1. A reachable Prism Router base URL — hosted production, or a local gateway:
+1. A reachable Prism Router base URL (start a local gateway, or deploy your own):
 
 | | |
 | --- | --- |
-| **Hosted** | `https://prism-router-production.up.railway.app/v1` |
 | **Local** | `http://127.0.0.1:4000/v1` (`model-router` after `pip install -e ".[dev]"`) |
+| **Self-hosted** | `https://<your-service>/v1` (see [RAILWAY.md](RAILWAY.md)) |
 
 ```bash
-# Local only — Terminal 1
+# Local — Terminal 1
 cd prism-router
 source .venv/bin/activate
 model-router
@@ -48,7 +48,7 @@ This repository ships [`opencode.json`](../opencode.json) at the project root. O
 | Provider id | `model-router` |
 | Model id in UI | `model-router/auto` |
 | API `model` field | often `auto` (prefix stripped; gateway accepts it) |
-| `baseURL` | hosted `/v1` (or `http://127.0.0.1:4000/v1` locally) |
+| `baseURL` | `http://127.0.0.1:4000/v1` (or your deployed `/v1`) |
 | `streaming` | `true` (OpenAI-compatible SSE; set `false` only if you prefer buffered responses) |
 | `X-Session-Id` | stable id per workspace (session affinity) |
 | `apiKey` | `unused` (gateway does not need a real OpenCode-side key) |
@@ -62,7 +62,7 @@ This repository ships [`opencode.json`](../opencode.json) at the project root. O
       "npm": "@ai-sdk/openai-compatible",
       "name": "Model-Router",
       "options": {
-        "baseURL": "https://prism-router-production.up.railway.app/v1",
+        "baseURL": "http://127.0.0.1:4000/v1",
         "apiKey": "unused",
         "streaming": true,
         "headers": {
@@ -126,7 +126,7 @@ opencode run "Reply with exactly: pong" -m model-router/auto --auto
 Simulate what OpenCode sends (non-stream):
 
 ```bash
-curl -sS https://prism-router-production.up.railway.app/v1/chat/completions \
+curl -sS http://127.0.0.1:4000/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: opencode-local' \
   -d '{
@@ -145,7 +145,7 @@ OpenCode uses OpenAI-compatible streaming when `"streaming": true` (recommended)
 Verify a stream without OpenCode:
 
 ```bash
-curl -N -sS https://prism-router-production.up.railway.app/v1/chat/completions \
+curl -N -sS http://127.0.0.1:4000/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: opencode-local' \
   -d '{

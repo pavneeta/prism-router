@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     model_router_rate_limit_rpm: int = 0
     # Optional public URL of this gateway — also cleared from provider *_API_BASE envs
     model_router_public_base: str = ""
+    # Comma-separated client API keys. Empty = no client auth (local default).
+    # Set on any public deploy so the internet cannot spend your provider keys.
+    model_router_api_keys: str = ""
 
     @property
     def config_dir(self) -> Path:

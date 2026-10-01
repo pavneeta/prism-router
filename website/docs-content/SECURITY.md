@@ -3,24 +3,34 @@
 ## Never commit
 
 - `.env` (gitignored)
-- Provider API keys in docs, issues, or chat
+- Provider API keys or client API keys in docs, issues, or chat
 
 ## Keys used with this project
 
-| Provider | Env var | Rotate at |
+| Kind | Env var | Notes |
 | --- | --- | --- |
-| Fireworks | `FIREWORKS_API_KEY` | https://app.fireworks.ai |
-| OpenAI | `OPENAI_API_KEY` | https://platform.openai.com/api-keys |
-| Anthropic | `ANTHROPIC_API_KEY` | https://console.anthropic.com |
+| Fireworks (provider) | `FIREWORKS_API_KEY` | https://app.fireworks.ai |
+| OpenAI (provider) | `OPENAI_API_KEY` | https://platform.openai.com/api-keys |
+| Anthropic (provider) | `ANTHROPIC_API_KEY` | https://console.anthropic.com |
+| **Client gate** | `MODEL_ROUTER_API_KEYS` | Comma-separated. Empty = open (local). **Required on public deploys.** |
 
-If a key was pasted into chat, email, or a ticket: **revoke it and create a new one**, then update local `.env` only.
+If a key was pasted into chat, email, or a ticket: **revoke it and create a new one**, then update local `.env` / Railway variables only.
+
+### Client API keys (public gateway)
+
+When `MODEL_ROUTER_API_KEYS` is set, every request except `/health` and `/ready` must include:
+
+- `Authorization: Bearer <key>`, or
+- `X-Api-Key: <key>`
+
+Without this on an internet-facing host, anyone who finds the URL can spend your provider budget. See root [SECURITY.md](../SECURITY.md).
 
 ## Checklist after rotation
 
-1. Revoke old keys in each provider console
+1. Revoke old keys in each provider console (and rotate client keys if leaked)
 2. Put new values in `.env` (never commit) or Railway service variables
 3. Restart the gateway: `model-router` (or redeploy Railway)
-4. Smoke: `curl …/health`, `curl …/ready`, and a short `/v1/chat/completions` call
+4. Smoke: `curl …/health`, `curl …/ready`, and a short `/v1/chat/completions` call (with client key if configured)
 
 Telemetry and error strings redact common `sk-` / `sk-ant-` / `fw_` / Bearer shapes. Still never log raw keys.
 

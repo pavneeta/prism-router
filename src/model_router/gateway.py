@@ -49,7 +49,6 @@ def _clear_self_referential_provider_bases() -> None:
         "127.0.0.1:4000",
         "localhost:4000",
         "0.0.0.0:4000",
-        "prism-router-production.up.railway.app",
     ]
     public = (os.environ.get("MODEL_ROUTER_PUBLIC_BASE") or "").strip().rstrip("/")
     if public:
@@ -117,6 +116,33 @@ async def _unhandled_exception_handler(_request: Request, _exc: Exception) -> JS
     )
 
 
+class _ClientAuthMiddleware(BaseHTTPMiddleware):
+    """Optional Bearer / X-Api-Key gate when MODEL_ROUTER_API_KEYS is set."""
+
+    _SKIP = {"/health", "/ready", "/docs", "/openapi.json", "/redoc"}
+
+    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+        if request.method == "OPTIONS" or request.url.path in self._SKIP:
+            return await call_next(request)
+        from model_router.client_auth import client_api_key_ok, configured_api_keys, extract_client_api_key
+
+        allowed = configured_api_keys()
+        if not allowed:
+            return await call_next(request)
+        presented = extract_client_api_key(
+            request.headers.get("authorization"),
+            request.headers.get("x-api-key"),
+        )
+        if not client_api_key_ok(presented, allowed):
+            return _openai_error(
+                "Invalid or missing API key. Pass Authorization: Bearer <key> or X-Api-Key.",
+                status_code=401,
+                err_type="invalid_request_error",
+                code="invalid_api_key",
+            )
+        return await call_next(request)
+
+
 class _RateLimitMiddleware(BaseHTTPMiddleware):
     """In-process RPM limiter; skipped for health/ready probes."""
 
@@ -157,7 +183,9 @@ def _configure_app_middleware() -> None:
             allow_headers=["*"],
             expose_headers=["x-request-id"],
         )
+    # Auth outermost among app middlewares so unauthenticated traffic never hits RPM buckets.
     app.add_middleware(_RateLimitMiddleware)
+    app.add_middleware(_ClientAuthMiddleware)
 
 
 _configure_app_middleware()

@@ -1,0 +1,17 @@
+name: Feature request
+description: Routing, cache, benchmarks, harness integration, or ops
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Who is affected and what outcome you want ($/task, latency, accuracy)
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Optional — API shape, config knob, or doc change

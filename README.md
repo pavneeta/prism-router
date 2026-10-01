@@ -8,8 +8,9 @@ Prism Router sits in front of your model providers (via [LiteLLM](https://github
 
 Repo: [github.com/pavneeta/prism-router](https://github.com/pavneeta/prism-router)
 
-**Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)  
-**Hosted API:** [https://prism-router-production.up.railway.app](https://prism-router-production.up.railway.app) (`…/v1`)
+**Live site:** [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
+
+License: **Apache-2.0** · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ---
 
@@ -40,27 +41,11 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 
 ## Quick start
 
-### Option A — Hosted API (Railway)
-
-```bash
-export OPENAI_API_BASE="https://prism-router-production.up.railway.app/v1"
-
-curl -sS "$OPENAI_API_BASE/chat/completions" \
-  -H 'Content-Type: application/json' \
-  -H 'X-Session-Id: demo-1' \
-  -d '{
-    "model": "auto",
-    "messages": [{"role": "user", "content": "Write a Python hello world."}]
-  }' | python -m json.tool
-```
-
-Deploy details: [docs/RAILWAY.md](docs/RAILWAY.md). Full guide: [docs/USAGE.md](docs/USAGE.md).
-
-### Option B — Run locally
+### Run locally
 
 ```bash
 git clone https://github.com/pavneeta/prism-router.git
-cd prism-router   # or Model-Router
+cd prism-router
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -73,7 +58,9 @@ model-router           # http://127.0.0.1:4000
 ```
 
 ```bash
-curl -s http://127.0.0.1:4000/v1/chat/completions \
+export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+
+curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: demo-1' \
   -d '{
@@ -84,20 +71,23 @@ curl -s http://127.0.0.1:4000/v1/chat/completions \
 
 Use model id `model-router/auto` or `auto`. Responses include a `model_router` block with classification and the selected model.
 
+Deploy your own gateway with Docker / [Railway](docs/RAILWAY.md) (or any container host). Set `MODEL_ROUTER_API_KEYS` on any internet-facing deploy. Full guide: [docs/USAGE.md](docs/USAGE.md).
+
 ---
 
 ## Documentation
 
 | Doc | Contents |
 | --- | --- |
-| **[Usage guide](docs/USAGE.md)** | Hosted API + local install, config, API, telemetry |
-| **[Railway deploy](docs/RAILWAY.md)** | Production gateway URL, env vars, deploy |
+| **[Usage guide](docs/USAGE.md)** | Local install, config, API, telemetry |
+| **[Deploy (Railway)](docs/RAILWAY.md)** | Container deploy, env vars, replicas |
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common errors and fixes |
 | **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
 | **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |
 | **[HolmesGPT](docs/HOLMESGPT.md)** | Point HolmesGPT (CNCF SRE agent) at Prism Router |
 | [Benchmarks](docs/BENCHMARKS.md) | Score provenance and task mapping |
 | [Security](docs/SECURITY.md) | Key rotation and secret handling |
+| [Contributing](CONTRIBUTING.md) | Dev setup and PR expectations |
 | [Architecture](docs/internal/ARCHITECTURE.md) | System design (GitHub) |
 | [CI](docs/internal/CI.md) | Pytest CI, monthly benchmarks, GHCR release (GitHub) |
 | [A/B notes](docs/internal/AB_ANTHROPIC_VS_FIREWORKS.md) | Anthropic vs Fireworks session snapshot (GitHub) |
@@ -106,7 +96,16 @@ Use model id `model-router/auto` or `auto`. Responses include a `model_router` b
 
 ## Provider keys (gateway-side)
 
-Put keys in **`.env`** (gitignored). Never commit them. Never put them in harness config if the gateway already holds them. If a key was ever pasted into chat, **rotate it** ([SECURITY.md](docs/SECURITY.md)).
+Put **provider** keys in **`.env`** (gitignored) or host secrets. Never commit them. Never put them in harness config if the gateway already holds them. If a key was ever pasted into chat, **rotate it** ([SECURITY.md](SECURITY.md) / [docs/SECURITY.md](docs/SECURITY.md)).
+
+For **internet-facing** gateways, also set **client** keys:
+
+```bash
+MODEL_ROUTER_API_KEYS=pr_your_long_random_client_key
+MODEL_ROUTER_RATE_LIMIT_RPM=60
+```
+
+Clients then send `Authorization: Bearer …` or `X-Api-Key` (OpenAI-compatible).
 
 ```bash
 FIREWORKS_API_KEY=...
@@ -166,4 +165,4 @@ python scripts/update_benchmarks.py --dry-run -v
 
 ## License
 
-See the repository `LICENSE` file.
+Apache License 2.0 — see [`LICENSE`](LICENSE).
