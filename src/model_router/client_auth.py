@@ -10,6 +10,7 @@ so strangers cannot burn your provider keys.
 from __future__ import annotations
 
 import hmac
+import hashlib
 import os
 import secrets
 
@@ -38,6 +39,13 @@ def client_api_key_ok(presented: str | None, allowed: frozenset[str] | None = No
     if not presented:
         return False
     return any(hmac.compare_digest(presented, k) for k in keys)
+
+
+def client_principal(presented: str | None) -> str:
+    """Non-reversible tenant namespace; never retain/log the raw client key."""
+    if not presented:
+        return "anonymous"
+    return hashlib.sha256(presented.encode()).hexdigest()[:24]
 
 
 def new_client_api_key() -> str:

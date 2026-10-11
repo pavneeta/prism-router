@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -13,9 +14,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from model_router import __version__
 from model_router.classifier import Classification, classify_messages
 from model_router.config import (
     get_selection_policy,
@@ -23,12 +25,14 @@ from model_router.config import (
     load_benchmarks,
     load_models,
     load_policy,
+    validate_config_bundle,
 )
 from model_router.litellm_backend import (
     acompletion,
     apply_provider_cache_hints,
     completion_cost,
     extract_token_usage,
+    provider_credential_available,
     provider_type,
 )
 from model_router.feedback import FeedbackEvent, get_feedback_logger
@@ -78,7 +82,7 @@ def _clear_self_referential_provider_bases() -> None:
 
 _clear_self_referential_provider_bases()
 
-app = FastAPI(title="Prism Router", version="0.2.0")
+app = FastAPI(title="Prism Router", version=__version__)
 
 
 def _openai_error(
@@ -133,10 +137,23 @@ class _ClientAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
         if request.method == "OPTIONS" or request.url.path in self._SKIP:
             return await call_next(request)
-        from model_router.client_auth import client_api_key_ok, configured_api_keys, extract_client_api_key
+        from model_router.client_auth import (
+            client_api_key_ok,
+            client_principal,
+            configured_api_keys,
+            extract_client_api_key,
+        )
 
         allowed = configured_api_keys()
+        if get_settings().model_router_public_mode and not allowed:
+            return _openai_error(
+                "Public mode requires MODEL_ROUTER_API_KEYS.",
+                status_code=503,
+                err_type="server_error",
+                code="public_auth_not_configured",
+            )
         if not allowed:
+            request.state.principal = "anonymous"
             return await call_next(request)
         presented = extract_client_api_key(
             request.headers.get("authorization"),
@@ -149,6 +166,7 @@ class _ClientAuthMiddleware(BaseHTTPMiddleware):
                 err_type="invalid_request_error",
                 code="invalid_api_key",
             )
+        request.state.principal = client_principal(presented)
         return await call_next(request)
 
 
@@ -201,11 +219,18 @@ _configure_app_middleware()
 
 
 class ChatMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     role: str
     content: Any = ""
+    name: str | None = None
+    tool_call_id: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
 
 
 class ChatCompletionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     model: str
     messages: list[ChatMessage]
     temperature: float | None = None
@@ -214,6 +239,13 @@ class ChatCompletionRequest(BaseModel):
     tools: list[dict[str, Any]] | None = None
     tool_choice: Any | None = None
     user: str | None = None
+    top_p: float | None = None
+    stop: str | list[str] | None = None
+    response_format: dict[str, Any] | None = None
+    seed: int | None = None
+    parallel_tool_calls: bool | None = None
+    reasoning_effort: str | None = None
+    max_completion_tokens: int | None = None
 
 
 class ExplainRequest(BaseModel):
@@ -250,10 +282,16 @@ def _likely_prefix_reuse(messages: list[ChatMessage], tools: list[dict[str, Any]
 
 
 def _deterministic_request(body: ChatCompletionRequest) -> bool:
-    return body.temperature is None or body.temperature == 0
+    # Absence of temperature means provider default, not determinism.
+    return (
+        body.temperature == 0
+        and not body.tools
+        and body.tool_choice is None
+        and body.reasoning_effort is None
+    )
 
 
-def _local_cache_key(body: ChatCompletionRequest) -> str:
+def _local_cache_key(body: ChatCompletionRequest, *, principal: str) -> str:
     """Key by requested model so lookup can run before classify/route."""
     cache = get_prompt_cache()
     return cache.request_key(
@@ -261,7 +299,19 @@ def _local_cache_key(body: ChatCompletionRequest) -> str:
         messages=[m.model_dump() for m in body.messages],
         tools=body.tools,
         temperature=body.temperature,
-        max_tokens=body.max_tokens,
+        max_tokens=body.max_tokens or body.max_completion_tokens,
+        principal=principal,
+        extra={
+            "tool_choice": body.tool_choice,
+            "user": body.user,
+            "top_p": body.top_p,
+            "stop": body.stop,
+            "response_format": body.response_format,
+            "seed": body.seed,
+            "parallel_tool_calls": body.parallel_tool_calls,
+            "reasoning_effort": body.reasoning_effort,
+            "max_completion_tokens": body.max_completion_tokens,
+        },
     )
 
 
@@ -469,17 +519,36 @@ def _update_affinity(
 
 def _completion_kwargs(body: ChatCompletionRequest, litellm_model: str | None = None) -> dict[str, Any]:
     kwargs: dict[str, Any] = {}
-    if body.temperature is not None:
-        kwargs["temperature"] = body.temperature
-    if body.max_tokens is not None:
-        kwargs["max_tokens"] = body.max_tokens
-    if body.tool_choice is not None:
-        kwargs["tool_choice"] = body.tool_choice
+    for field in (
+        "temperature",
+        "max_tokens",
+        "max_completion_tokens",
+        "tool_choice",
+        "top_p",
+        "stop",
+        "response_format",
+        "seed",
+        "parallel_tool_calls",
+        "reasoning_effort",
+        "user",
+    ):
+        value = getattr(body, field)
+        if value is not None:
+            kwargs[field] = value
     # Newer OpenAI GPT-5.* chat models only accept default temperature.
     model = (litellm_model or body.model or "").lower()
     if "gpt-5" in model:
         kwargs.pop("temperature", None)
     return kwargs
+
+
+def _retryable_upstream_error(exc: Exception) -> bool:
+    status = getattr(exc, "status_code", None)
+    if status in (401, 403):
+        return False
+    if status == 429 or (isinstance(status, int) and 500 <= status <= 599):
+        return True
+    return isinstance(exc, (TimeoutError, asyncio.TimeoutError, ConnectionError))
 
 
 @app.get("/health")
@@ -497,18 +566,48 @@ async def health() -> dict[str, Any]:
             "openai": bool(os.getenv("OPENAI_API_KEY")),
             "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
             "fireworks": bool(os.getenv("FIREWORKS_API_KEY")),
+            "together": bool(os.getenv("TOGETHER_API_KEY")),
         },
     }
 
 
 @app.get("/ready")
 async def ready() -> JSONResponse:
-    """Readiness — config YAML loads. Does not validate provider key values."""
+    """Readiness — validate configuration and live provider viability."""
     try:
         policy = load_policy()
         benches = load_benchmarks()
         models = load_models()
         settings = get_settings()
+        errors = validate_config_bundle(policy=policy, benchmarks=benches, models=models)
+        enabled = {d.id: d for d in models.deployments if d.enabled}
+        auto = [d for d in enabled.values() if d.auto_select]
+        viable = [d.id for d in auto if provider_credential_available(d.litellm_model)]
+        fallback = enabled.get(policy.safe_fallback_model)
+        fallback_ready = bool(
+            fallback and provider_credential_available(fallback.litellm_model)
+        )
+        if not settings.model_router_dry_run:
+            if not viable:
+                errors.append(
+                    "no viable auto deployment has a configured provider credential"
+                )
+            if not fallback_ready:
+                errors.append(
+                    "safe fallback provider credential unavailable: "
+                    f"{policy.safe_fallback_model}"
+                )
+        if settings.model_router_public_mode and not settings.model_router_api_keys.strip():
+            errors.append("public mode requires MODEL_ROUTER_API_KEYS")
+        if errors:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "not_ready",
+                    "errors": errors,
+                    "viable_deployments": viable,
+                },
+            )
         cache = get_prompt_cache()
         backend = cache.backend()
         note = (
@@ -530,12 +629,15 @@ async def ready() -> JSONResponse:
                     "benchmarks": len(benches.models),
                     "deployments": len(models.deployments),
                     "prompt_cache_enabled": policy.prompt_cache_enabled,
+                    "local_response_cache_enabled": policy.local_response_cache_enabled,
                     "shared_local_cache_enabled": policy.shared_local_cache_enabled,
                 },
                 "dry_run": settings.model_router_dry_run,
                 "mirror_mode": settings.model_router_mirror_mode,
                 "session_store": backend,
                 "provider_health": get_provider_health().snapshot(),
+                "viable_deployments": viable,
+                "safe_fallback_ready": fallback_ready or settings.model_router_dry_run,
                 "note": note,
             }
         )
@@ -549,10 +651,12 @@ async def ready() -> JSONResponse:
 
 
 @app.get("/v1/router/sessions/{session_id}")
-async def session_rollup(session_id: str) -> dict[str, Any]:
+async def session_rollup(session_id: str, request: Request) -> dict[str, Any]:
     """Per-session telemetry rollup (tokens, $, cache hits, task mix)."""
-    rollup = get_session_store().get_rollup(session_id)
-    task = get_session_store().get_task(session_id)
+    principal = getattr(request.state, "principal", "anonymous")
+    internal_session_id = f"{principal}:{session_id}"
+    rollup = get_session_store().get_rollup(internal_session_id)
+    task = get_session_store().get_task(internal_session_id)
     if rollup is None and task is None:
         raise HTTPException(status_code=404, detail="session not found")
     return {
@@ -572,20 +676,35 @@ async def session_rollup(session_id: str) -> dict[str, Any]:
 
 @app.get("/v1/router/metrics/usage")
 async def usage_metrics(
+    request: Request,
     session_id: str | None = None,
     model: str | None = None,
     provider: str | None = None,
+    x_admin_api_key: str | None = Header(default=None, alias="x-admin-api-key"),
 ) -> dict[str, Any]:
-    """In-process token usage rollups by session, model, and provider.
+    """Admin-authorized token usage rollups by session, model, and provider."""
+    settings = get_settings()
+    if settings.model_router_public_mode or settings.model_router_api_keys.strip():
+        import hmac
 
-    Unauthenticated like ``/ready`` and other ``/v1/router/*`` debug endpoints.
-    Query filters: ``session_id``, ``model`` (catalog / selected id), ``provider``.
-    """
-    return get_usage_metrics().snapshot(
-        session_id=session_id,
+        if not settings.model_router_admin_api_key or not x_admin_api_key or not hmac.compare_digest(
+            settings.model_router_admin_api_key, x_admin_api_key
+        ):
+            raise HTTPException(status_code=403, detail="admin authorization required")
+    principal = getattr(request.state, "principal", "anonymous")
+    internal_session_id = f"{principal}:{session_id}" if session_id else None
+    snapshot = get_usage_metrics().snapshot(
+        session_id=internal_session_id,
         model=model,
         provider=provider,
     )
+    # Never expose the internal principal namespace to clients.
+    snapshot["filters"]["session_id"] = session_id
+    if session_id and internal_session_id in snapshot["by_session"]:
+        snapshot["by_session"] = {
+            session_id: snapshot["by_session"][internal_session_id]
+        }
+    return snapshot
 
 
 class RouterFeedbackRequest(BaseModel):
@@ -596,7 +715,7 @@ class RouterFeedbackRequest(BaseModel):
 
 
 @app.post("/v1/router/feedback")
-async def router_feedback(body: RouterFeedbackRequest) -> dict[str, Any]:
+async def router_feedback(body: RouterFeedbackRequest, request: Request) -> dict[str, Any]:
     """Append pass/fail outcome for offline benchmark loops (no online learning)."""
     outcome = body.outcome.strip().lower()
     if outcome not in {"pass", "fail"}:
@@ -605,7 +724,9 @@ async def router_feedback(body: RouterFeedbackRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="session_id required")
     event = FeedbackEvent(
         ts=now_ts(),
-        session_id=body.session_id.strip(),
+        session_id=(
+            f"{getattr(request.state, 'principal', 'anonymous')}:{body.session_id.strip()}"
+        ),
         outcome=outcome,
         task_hint=(body.task_hint or "").strip() or None,
         notes=(body.notes or "").strip() or None,
@@ -713,9 +834,12 @@ async def anthropic_messages(
 @app.post("/v1/router/explain")
 async def explain(
     body: ExplainRequest,
+    request: Request,
     x_session_id: str | None = Header(default=None),
 ) -> dict[str, Any]:
-    session_id = body.session_id or x_session_id
+    raw_session_id = body.session_id or x_session_id
+    principal = getattr(request.state, "principal", "anonymous")
+    session_id = f"{principal}:{raw_session_id}" if raw_session_id else None
     classification, decision, litellm_model = _route(
         requested_model=body.model,
         messages=body.messages,
@@ -730,7 +854,7 @@ async def explain(
         },
         "decision": _decision_payload(decision) if decision else None,
         "litellm_model": litellm_model,
-        "session_id": session_id,
+        "session_id": raw_session_id,
     }
 
 
@@ -749,17 +873,23 @@ async def _stream_completion(
     tools: list[dict[str, Any]] | None,
     kwargs: dict[str, Any],
 ) -> AsyncIterator[str]:
+    settings = get_settings()
     status = "ok"
     error: str | None = None
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
     cached_tokens: int | None = None
+    response: Any | None = None
     try:
         call_kwargs = dict(kwargs)
         if tools is not None:
             call_kwargs["tools"] = tools
-        # Ask OpenAI-family providers for a final usage chunk when streaming.
-        if "stream_options" not in call_kwargs and provider_type(litellm_model) == "openai":
+        # OpenAI-compatible providers return usage on the final chunk when asked.
+        if "stream_options" not in call_kwargs and provider_type(litellm_model) in {
+            "openai",
+            "together",
+            "fireworks",
+        }:
             call_kwargs["stream_options"] = {"include_usage": True}
         response = await acompletion(
             model=litellm_model,
@@ -767,7 +897,22 @@ async def _stream_completion(
             stream=True,
             **call_kwargs,
         )
-        async for chunk in response:
+        iterator = response.__aiter__()
+        deadline = time.monotonic() + settings.model_router_stream_total_timeout_seconds
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("stream total timeout")
+            try:
+                chunk = await asyncio.wait_for(
+                    anext(iterator),
+                    timeout=min(
+                        settings.model_router_stream_idle_timeout_seconds,
+                        remaining,
+                    ),
+                )
+            except StopAsyncIteration:
+                break
             if hasattr(chunk, "model_dump"):
                 data = chunk.model_dump()
             elif isinstance(chunk, dict):
@@ -787,12 +932,16 @@ async def _stream_completion(
                     cached_tokens = cached
             yield f"data: {json.dumps(data, default=str)}\n\n"
         yield "data: [DONE]\n\n"
+    except asyncio.CancelledError:
+        status = "cancelled"
+        error = "client disconnected"
+        raise
     except Exception as exc:  # noqa: BLE001
         status = "error"
         error = redact_secrets(str(exc))
         err_payload = {
             "error": {
-                "message": error or "stream error",
+                "message": "Upstream stream failed.",
                 "type": "upstream_error",
                 "param": None,
                 "code": "stream_error",
@@ -801,6 +950,11 @@ async def _stream_completion(
         yield f"data: {json.dumps(err_payload)}\n\n"
         yield "data: [DONE]\n\n"
     finally:
+        if response is not None and hasattr(response, "aclose"):
+            try:
+                await response.aclose()
+            except Exception:  # noqa: BLE001
+                pass
         latency_ms = (time.perf_counter() - started) * 1000
         try:
             _update_affinity(
@@ -839,6 +993,8 @@ async def chat_completions(
     settings = get_settings()
     policy_cfg = load_policy()
     cache = get_prompt_cache()
+    principal = getattr(request.state, "principal", "anonymous")
+    session_id = f"{principal}:{x_session_id}" if x_session_id else None
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
     started = time.perf_counter()
 
@@ -846,10 +1002,10 @@ async def chat_completions(
     cache_key: str | None = None
     if (
         not body.stream
-        and policy_cfg.prompt_cache_enabled
+        and policy_cfg.local_response_cache_enabled
         and _deterministic_request(body)
     ):
-        cache_key = _local_cache_key(body)
+        cache_key = _local_cache_key(body, principal=principal)
         lookup = cache.get_local(cache_key)
         if lookup.hit and lookup.response is not None:
             latency_ms = (time.perf_counter() - started) * 1000
@@ -870,7 +1026,7 @@ async def chat_completions(
             )
             _emit(
                 request_id=request_id,
-                session_id=x_session_id,
+                session_id=session_id,
                 body=body,
                 classification=classification,
                 decision=None,
@@ -891,7 +1047,7 @@ async def chat_completions(
         requested_model=body.model,
         messages=body.messages,
         tools=body.tools,
-        session_id=x_session_id,
+        session_id=session_id,
     )
 
     route_mode = "auto" if decision else "passthrough"
@@ -906,7 +1062,7 @@ async def chat_completions(
         latency_ms = (time.perf_counter() - started) * 1000
         _emit(
             request_id=request_id,
-            session_id=x_session_id,
+            session_id=session_id,
             body=body,
             classification=classification,
             decision=decision,
@@ -918,7 +1074,7 @@ async def chat_completions(
             cache_layer=decision.cache_layer if decision else "none",
         )
         _update_affinity(
-            session_id=x_session_id,
+            session_id=session_id,
             decision=decision,
             prompt_tokens=None,
             messages=body.messages,
@@ -958,7 +1114,7 @@ async def chat_completions(
         messages=raw_messages,
         tools=body.tools,
         supports_prompt_caching=supports_caching and policy_cfg.prompt_cache_enabled,
-        session_id=x_session_id,
+        session_id=session_id,
         fireworks_hide_thinking=policy_cfg.fireworks_hide_thinking,
     )
     kwargs = _completion_kwargs(body, litellm_model)
@@ -998,14 +1154,14 @@ async def chat_completions(
                 yield "data: [DONE]\n\n"
                 latency_ms = (time.perf_counter() - started) * 1000
                 _update_affinity(
-                    session_id=x_session_id,
+                    session_id=session_id,
                     decision=decision,
                     prompt_tokens=None,
                     messages=body.messages,
                 )
                 _emit(
                     request_id=request_id,
-                    session_id=x_session_id,
+                    session_id=session_id,
                     body=body,
                     classification=classification,
                     decision=decision,
@@ -1023,7 +1179,7 @@ async def chat_completions(
             _stream_completion(
                 body=body,
                 request_id=request_id,
-                session_id=x_session_id,
+                session_id=session_id,
                 classification=classification,
                 decision=decision,
                 selected_model=selected_model,
@@ -1041,11 +1197,23 @@ async def chat_completions(
         call_kwargs = dict(kwargs)
         if tools is not None:
             call_kwargs["tools"] = tools
-        response = await acompletion(
-            model=litellm_model,
-            messages=messages,
-            **call_kwargs,
-        )
+        try:
+            response = await acompletion(
+                model=litellm_model,
+                messages=messages,
+                **call_kwargs,
+            )
+        except Exception as first_exc:  # noqa: BLE001
+            # One bounded retry for non-stream requests only. Auth/permission
+            # failures are never retried; streams cannot be retried after bytes.
+            if not _retryable_upstream_error(first_exc):
+                raise
+            await asyncio.sleep(0.15)
+            response = await acompletion(
+                model=litellm_model,
+                messages=messages,
+                **call_kwargs,
+            )
         status = "ok"
         error = None
     except Exception as exc:  # noqa: BLE001 — surface provider errors to client
@@ -1053,7 +1221,7 @@ async def chat_completions(
         safe_err = redact_secrets(str(exc)) or "upstream error"
         _emit(
             request_id=request_id,
-            session_id=x_session_id,
+            session_id=session_id,
             body=body,
             classification=classification,
             decision=decision,
@@ -1064,7 +1232,10 @@ async def chat_completions(
             status="error",
             error=safe_err,
         )
-        raise HTTPException(status_code=502, detail=safe_err) from exc
+        raise HTTPException(
+            status_code=502,
+            detail="Upstream provider request failed. Retry later.",
+        ) from exc
 
     latency_ms = (time.perf_counter() - started) * 1000
     usage = getattr(response, "usage", None)
@@ -1113,7 +1284,7 @@ async def chat_completions(
         schedule_mirror_eval(
             settings=settings,
             request_id=request_id,
-            session_id=x_session_id,
+            session_id=session_id,
             requested_model=body.model,
             primary_litellm_model=litellm_model,
             primary_content=primary_content if isinstance(primary_content, str) else None,
@@ -1131,7 +1302,7 @@ async def chat_completions(
         cache.put_local(cache_key, payload)
 
     _update_affinity(
-        session_id=x_session_id,
+        session_id=session_id,
         decision=decision,
         prompt_tokens=prompt_tokens,
         messages=body.messages,
@@ -1139,7 +1310,7 @@ async def chat_completions(
 
     _emit(
         request_id=request_id,
-        session_id=x_session_id,
+        session_id=session_id,
         body=body,
         classification=classification,
         decision=decision,

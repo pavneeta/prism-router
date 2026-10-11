@@ -33,7 +33,7 @@ EXPOSE 4000
 
 # Local docker run; Railway uses its own healthcheckPath from railway.toml
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
-  CMD python -c "import os,urllib.request; p=os.environ.get('PORT') or os.environ.get('MODEL_ROUTER_PORT','4000'); urllib.request.urlopen(f'http://127.0.0.1:{p}/health', timeout=3)"
+  CMD python -c "import os,urllib.request; p=os.environ.get('PORT') or os.environ.get('MODEL_ROUTER_PORT','4000'); urllib.request.urlopen(f'http://127.0.0.1:{p}/ready', timeout=3)"
 
 # Railway (and similar hosts) inject PORT; fall back to 4000 locally.
 CMD ["sh", "-c", "export MODEL_ROUTER_PORT=\"${PORT:-${MODEL_ROUTER_PORT:-4000}}\"; exec model-router"]

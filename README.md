@@ -31,9 +31,9 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 | --- | --- |
 | Task-aware routing | Heuristic classifier → intelligence floor → min effective $ |
 | Benchmark seed | DeepSWE / SWE-bench / Terminal-Bench / AA / Arena ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)) |
-| Cache-aware | Local exact cache, session affinity (`X-Session-Id`), provider cache hints |
+| Cache-aware | Session affinity (`X-Session-Id`) and provider cache hints; local exact caching is opt-in |
 | Drop-in API | OpenAI `POST /v1/chat/completions` (+ streaming) and Anthropic `POST /v1/messages` |
-| Providers | Fireworks, OpenAI, Anthropic, and anything LiteLLM supports |
+| Providers | Together.ai (default open-weight backend), Fireworks, OpenAI, Anthropic, and anything LiteLLM supports |
 | Harness-friendly | Works with OpenCode, Hermes, HolmesGPT, and any OpenAI-compatible client |
 | Sessions | `X-Session-Id` task memory + `GET /v1/router/sessions/{id}` rollups |
 
@@ -85,6 +85,7 @@ Deploy your own gateway with Docker / [Railway](docs/RAILWAY.md) (or any contain
 | **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
 | **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |
 | **[HolmesGPT](docs/HOLMESGPT.md)** | Point HolmesGPT (CNCF SRE agent) at Prism Router |
+| [Together.ai](docs/TOGETHER.md) | Default open-weight mappings and setup |
 | [Benchmarks](docs/BENCHMARKS.md) | Score provenance and task mapping |
 | [Security](docs/SECURITY.md) | Key rotation and secret handling |
 | [Contributing](CONTRIBUTING.md) | Dev setup and PR expectations |
@@ -109,6 +110,7 @@ Clients then send `Authorization: Bearer …` or `X-Api-Key` (OpenAI-compatible)
 
 ```bash
 FIREWORKS_API_KEY=...
+TOGETHER_API_KEY=...
 OPENAI_API_KEY=...
 ANTHROPIC_API_KEY=...
 MODEL_ROUTER_DRY_RUN=false

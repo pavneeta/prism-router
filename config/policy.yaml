@@ -33,6 +33,8 @@ min_classification_confidence: 0.35
 
 # --- Prompt caching / cache-aware routing ---
 prompt_cache_enabled: true
+# Exact response caching is opt-in; unsafe for public/multi-tenant defaults.
+local_response_cache_enabled: false
 local_cache_ttl_seconds: 300
 session_affinity_ttl_seconds: 1800
 cache_switch_savings_margin: 0.15

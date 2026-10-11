@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import os
 from typing import Any
 
 import litellm
@@ -67,6 +68,34 @@ def provider_type(model: str) -> str:
     if "/" in lower:
         return lower.split("/", 1)[0] or "unknown"
     return "unknown"
+
+
+_PROVIDER_CREDENTIALS: dict[str, tuple[str, ...]] = {
+    "openai": ("OPENAI_API_KEY",),
+    "anthropic": ("ANTHROPIC_API_KEY",),
+    "fireworks": ("FIREWORKS_API_KEY", "FIREWORKS_AI_API_KEY"),
+    "together": ("TOGETHER_API_KEY",),
+    "google": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    "groq": ("GROQ_API_KEY",),
+}
+
+
+def provider_credential_available(
+    model: str,
+    *,
+    environ: dict[str, str] | None = None,
+) -> bool:
+    """Return whether the provider credential required by ``model`` exists.
+
+    Unknown/custom providers are fail-closed for automatic routing. Explicit
+    passthrough still reaches LiteLLM and can use its provider-specific auth.
+    """
+    env = os.environ if environ is None else environ
+    provider = provider_type(model)
+    names = _PROVIDER_CREDENTIALS.get(provider)
+    if not names:
+        return False
+    return any(bool((env.get(name) or "").strip()) for name in names)
 
 
 def _as_usage_dict(usage: Any) -> dict[str, Any] | None:

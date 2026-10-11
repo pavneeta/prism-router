@@ -10,6 +10,8 @@ _SECRET_RE = re.compile(
     r"sk-[a-z0-9_-]{10,}"
     r"|sk-ant-[a-z0-9_-]{10,}"
     r"|fw_[a-z0-9_-]{10,}"
+    r"|tgp_v1_[a-z0-9_-]{10,}"
+    r"|gsk_[a-z0-9_-]{10,}"
     r"|Bearer\s+\S+"
     r"|api[_-]?key['\"]?\s*[:=]\s*['\"]?[^\s'\"]+"
     r")"
