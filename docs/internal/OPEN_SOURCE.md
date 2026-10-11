@@ -29,7 +29,7 @@ https://github.com/pavneeta/prism-router-private — see `docs/private/RAILWAY_P
 ### Sun (go public)
 
 - [x] Final scan: no private hostnames in working tree (`rg -i 'railway\.app' --glob '!docs/internal/stress_runs/**'`)
-- [ ] Optional: history scrub for old production URLs in git (see below) — **only with explicit approval**; not required if tree is clean
+- [x] History scrub tooling (`scripts/git_history_scrub.py`) — current tree stays placeholder-only; rewriting published `main` still needs **explicit approval** + force-push
 - [x] `gh repo edit pavneeta/prism-router --visibility public`
 - [x] Verify README + [prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) look correct
 - [ ] Optional: make GHCR package public (Settings → Packages → `prism-router` → Change visibility)
@@ -60,11 +60,22 @@ https://github.com/pavneeta/prism-router-private — see `docs/private/RAILWAY_P
 - LiteLLM `CustomRoutingStrategy` / routing-plugin mode
 - Anthropic Messages parity beyond current LiteLLM path
 - Edge/CDN hard rate limits in front of public gateway
-- Full git history rewrite to remove leaked URLs (optional hygiene)
+- Force-push of rewritten `main` after `git filter-repo` (optional hygiene; explicit approval only)
 
 ## Optional: git history scrub
 
-Past commits may still mention an old `*.up.railway.app` hostname. The **current tree** is scrubbed; rewriting history requires `git filter-repo` or BFG and **force-push** to `main` — coordinate before go-public if you care about searchability in GitHub UI.
+Past commits may still mention an old concrete `*.up.railway.app` hostname. The **current tree** is placeholder-only (`<your-service>`). Tooling:
+
+```bash
+python scripts/git_history_scrub.py scan            # working tree
+python scripts/git_history_scrub.py scan --history  # redacted blob scan
+python scripts/git_history_scrub.py replacements    # git-filter-repo --replace-text lines
+python scripts/git_history_scrub.py rewrite --working-tree-only
+# History rewrite (local only; never force-pushes):
+# python scripts/git_history_scrub.py rewrite --i-understand-this-rewrites-history
+```
+
+Rewriting published history still requires `git filter-repo` and a **force-push** to `main` — do that only with explicit approval. The script never embeds a production hostname and never pushes.
 
 ## Repo hygiene
 
