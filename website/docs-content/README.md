@@ -1,5 +1,7 @@
 # Documentation index
 
+Prism is a **self-hosted** OpenAI-compatible gateway. After you run it, point clients at **your** `/v1` — `https://<your-prism-host>/v1` or `$OPENAI_API_BASE`. `http://127.0.0.1:4000/v1` is only the local example after `model-router` is running.
+
 User / operator guides (also rendered on the marketing site `/docs`):
 
 | Doc | Contents |

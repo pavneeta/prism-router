@@ -34,7 +34,10 @@ provider-side cache behavior is verified.
 ```bash
 model-router   # with TOGETHER_API_KEY set
 
-curl -sS http://127.0.0.1:4000/v1/chat/completions \
+export OPENAI_API_BASE="https://<your-prism-host>/v1"
+# Local example: export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+
+curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "deepseek/deepseek-v4-pro",

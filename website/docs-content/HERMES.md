@@ -1,8 +1,20 @@
 # Use with Hermes Agent
 
-Point [Nous Hermes](https://hermes-agent.nousresearch.com/) at Prism Router via a **custom OpenAI-compatible** endpoint. Streaming is supported: Hermes may send `stream: true`; Prism returns OpenAI-style SSE on `/v1/chat/completions`.
+Point [Nous Hermes](https://hermes-agent.nousresearch.com/) at **your** Prism Router `/v1` via a **custom OpenAI-compatible** endpoint. Streaming is supported: Hermes may send `stream: true`; Prism returns OpenAI-style SSE on `/v1/chat/completions`.
+
+Self-host the gateway first, then set `base_url` to `https://<your-prism-host>/v1` (or `$OPENAI_API_BASE`). `http://127.0.0.1:4000/v1` is only the local example after `model-router` is running.
 
 ## Config (`~/.hermes/config.yaml`)
+
+```yaml
+model:
+  default: auto
+  provider: custom
+  base_url: https://<your-prism-host>/v1
+  api_key: unused
+```
+
+**Local example** (after `model-router` is running):
 
 ```yaml
 model:
@@ -12,12 +24,12 @@ model:
   api_key: unused
 ```
 
-Provider API keys stay on the **gateway** `.env`. For a deployed gateway, use your service `/v1` URL instead.
+Provider API keys stay on the **gateway** `.env`.
 
 ## Smoke
 
 ```bash
-# terminal 1 (local only)
+# terminal 1 (local example)
 model-router
 
 # terminal 2

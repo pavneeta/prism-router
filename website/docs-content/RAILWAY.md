@@ -4,7 +4,7 @@ The **API gateway** (FastAPI + LiteLLM) deploys on [Railway](https://railway.com
 
 ## Public base URL
 
-After `railway domain` (or your custom domain), use your service hostname:
+After `railway domain` (or your custom domain), point clients at **your** service hostname — not `127.0.0.1:4000` (that is only the local `model-router` example):
 
 ```bash
 export OPENAI_API_BASE="https://<your-service>.up.railway.app/v1"

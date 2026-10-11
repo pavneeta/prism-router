@@ -10,9 +10,9 @@
 | Session rollup 404 | Make at least one request with that `X-Session-Id` first |
 | Anthropic `temperature=0` error | Gateway sets `litellm.drop_params=True` |
 | Fireworks dumps `<think>` / CoT into chat | Keep `fireworks_hide_thinking: true` in `policy.yaml` (default). Sends `reasoning_effort=none` + `thinking.type=disabled` |
-| OpenCode cannot connect | Gateway up? Run from project with `opencode.json`; `baseURL` ends with `/v1`; keep `"streaming": true` unless you intentionally buffer |
-| Hermes cannot connect | `provider: custom`, `base_url` ending in `/v1`, `default: auto` — or `python scripts/hermes_smoke.py` |
-| HolmesGPT cannot connect | `OPENAI_API_BASE=…/v1`, `OPENAI_API_KEY=none`, `--model=openai/auto`; tools required — see [HOLMESGPT.md](HOLMESGPT.md) |
+| OpenCode cannot connect | Gateway up? `baseURL` is **your** `/v1` (`https://<your-prism-host>/v1`, or local example `http://127.0.0.1:4000/v1` after `model-router`); keep `"streaming": true` unless you intentionally buffer |
+| Hermes cannot connect | `provider: custom`, `base_url` = your `/v1`, `default: auto` — or `python scripts/hermes_smoke.py` |
+| HolmesGPT cannot connect | `OPENAI_API_BASE` = your `/v1`, `OPENAI_API_KEY=none`, `--model=openai/auto`; tools required — see [HOLMESGPT.md](HOLMESGPT.md) |
 | Anthropic client wants stream | `/v1/messages?stream=true` is not implemented — point the client at `/v1/chat/completions` with `"stream": true` |
 | Stream hangs / empty SSE | Confirm upstream provider keys; dry-run still emits synthetic SSE; check gateway logs for `stream_error` chunks |
 

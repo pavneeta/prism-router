@@ -1,6 +1,6 @@
 # Use with OpenCode
 
-Point [OpenCode](https://opencode.ai) at Prism Router so agent turns go through intelligence-aware, cache-aware routing. Streaming (`stream: true` / OpenAI-compatible SSE) is supported — keep `"streaming": true` in the provider options.
+Point [OpenCode](https://opencode.ai) at **your** Prism Router `/v1` so agent turns go through intelligence-aware, cache-aware routing. Streaming (`stream: true` / OpenAI-compatible SSE) is supported — keep `"streaming": true` in the provider options.
 
 ## Architecture
 
@@ -14,15 +14,15 @@ Provider API keys live on the **gateway** (`.env`), not in OpenCode.
 
 ## Prerequisites
 
-1. A reachable Prism Router base URL (start a local gateway, or deploy your own):
+1. A reachable Prism Router base URL. Self-host the gateway first (local CLI or your container), then point OpenCode at **your** `/v1`:
 
 | | |
 | --- | --- |
-| **Local** | `http://127.0.0.1:4000/v1` (`model-router` after `pip install -e ".[dev]"`) |
-| **Self-hosted** | `https://<your-service>/v1` (see [RAILWAY.md](RAILWAY.md)) |
+| **Self-hosted / deployed** | `https://<your-prism-host>/v1` (see [RAILWAY.md](RAILWAY.md)) |
+| **Local example** | `http://127.0.0.1:4000/v1` — only after `model-router` is running (`pip install -e ".[dev]"`) |
 
 ```bash
-# Local — Terminal 1
+# Local example — Terminal 1
 cd prism-router
 source .venv/bin/activate
 model-router
@@ -41,14 +41,14 @@ Confirm: `opencode --version`
 
 ## Project config (recommended)
 
-This repository ships [`opencode.json`](../opencode.json) at the project root. OpenCode loads it when you start OpenCode **from that directory**.
+This repository ships [`opencode.json`](../opencode.json) at the project root as a **local example** (`http://127.0.0.1:4000/v1` after `model-router` is up). OpenCode loads it when you start OpenCode **from that directory**. For a deployed gateway, change `baseURL` to `https://<your-prism-host>/v1`.
 
 | Setting | Value |
 | --- | --- |
 | Provider id | `model-router` |
 | Model id in UI | `model-router/auto` |
 | API `model` field | often `auto` (prefix stripped; gateway accepts it) |
-| `baseURL` | `http://127.0.0.1:4000/v1` (or your deployed `/v1`) |
+| `baseURL` | `https://<your-prism-host>/v1` (local example: `http://127.0.0.1:4000/v1`) |
 | `streaming` | `true` (OpenAI-compatible SSE; set `false` only if you prefer buffered responses) |
 | `X-Session-Id` | stable id per workspace (session affinity) |
 | `apiKey` | `unused` (gateway does not need a real OpenCode-side key) |
@@ -62,7 +62,7 @@ This repository ships [`opencode.json`](../opencode.json) at the project root. O
       "npm": "@ai-sdk/openai-compatible",
       "name": "Model-Router",
       "options": {
-        "baseURL": "http://127.0.0.1:4000/v1",
+        "baseURL": "https://<your-prism-host>/v1",
         "apiKey": "unused",
         "streaming": true,
         "headers": {
@@ -79,7 +79,7 @@ This repository ships [`opencode.json`](../opencode.json) at the project root. O
 }
 ```
 
-For a local gateway, set `baseURL` to `http://127.0.0.1:4000/v1`. Copy this file into any other repo where you want the same wiring.
+**Local example** (after `model-router` is running): set `baseURL` to `http://127.0.0.1:4000/v1`. Copy this file into any other repo where you want the same wiring.
 
 ## Optional global config
 
@@ -105,14 +105,14 @@ Live OpenAI / Anthropic / Fireworks keys stay in the **gateway** `.env`.
 
 ## Run
 
-With the shipped `opencode.json` (hosted `baseURL` + `"streaming": true`):
+With a `baseURL` that matches **your** running gateway (`"streaming": true`):
 
 ```bash
 cd prism-router
 opencode
 ```
 
-For a local gateway instead, set `baseURL` to `http://127.0.0.1:4000/v1`, start `model-router` in another terminal, then run `opencode` from the project directory.
+For the local example, keep `baseURL` as `http://127.0.0.1:4000/v1`, start `model-router` in another terminal, then run `opencode` from the project directory.
 
 In the TUI, confirm model **model-router/auto** (`/models` if needed).
 
@@ -126,7 +126,10 @@ opencode run "Reply with exactly: pong" -m model-router/auto --auto
 Simulate what OpenCode sends (non-stream):
 
 ```bash
-curl -sS http://127.0.0.1:4000/v1/chat/completions \
+export OPENAI_API_BASE="https://<your-prism-host>/v1"
+# Local example: export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+
+curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: opencode-local' \
   -d '{
@@ -136,7 +139,7 @@ curl -sS http://127.0.0.1:4000/v1/chat/completions \
   }' | python -m json.tool
 ```
 
-For local gateway, swap the host to `http://127.0.0.1:4000`. Check `model_router.decision.selected_model` and the assistant content.
+Check `model_router.decision.selected_model` and the assistant content.
 
 ## Streaming
 
@@ -145,7 +148,10 @@ OpenCode uses OpenAI-compatible streaming when `"streaming": true` (recommended)
 Verify a stream without OpenCode:
 
 ```bash
-curl -N -sS http://127.0.0.1:4000/v1/chat/completions \
+export OPENAI_API_BASE="https://<your-prism-host>/v1"
+# Local example: export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+
+curl -N -sS "$OPENAI_API_BASE/chat/completions" \
   -H 'Content-Type: application/json' \
   -H 'X-Session-Id: opencode-local' \
   -d '{

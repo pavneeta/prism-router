@@ -51,14 +51,17 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 # Add provider keys to .env (see below)
-model-router           # http://127.0.0.1:4000
+model-router           # local example: http://127.0.0.1:4000
 
 # Dry-run (routing only, no provider spend)
 # MODEL_ROUTER_DRY_RUN=true model-router
 ```
 
 ```bash
+# After the gateway is up — local example:
 export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+# Self-hosted / deployed:
+# export OPENAI_API_BASE="https://<your-prism-host>/v1"
 
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H 'Content-Type: application/json' \
@@ -71,7 +74,7 @@ curl -sS "$OPENAI_API_BASE/chat/completions" \
 
 Use model id `model-router/auto` or `auto`. Responses include a `model_router` block with classification and the selected model.
 
-Deploy your own gateway with Docker / [Railway](docs/RAILWAY.md) (or any container host). Set `MODEL_ROUTER_API_KEYS` on any internet-facing deploy. Full guide: [docs/USAGE.md](docs/USAGE.md).
+Self-host the gateway (local CLI, Docker, or [Railway](docs/RAILWAY.md)), then point every client at **your** OpenAI-compatible `/v1` — `https://<your-prism-host>/v1` or `$OPENAI_API_BASE`. `http://127.0.0.1:4000/v1` is only the local example after `model-router` is running. Set `MODEL_ROUTER_API_KEYS` on any internet-facing deploy. Full guide: [docs/USAGE.md](docs/USAGE.md).
 
 ---
 
@@ -122,7 +125,9 @@ Enable deployments in [`config/models.yaml`](config/models.yaml). Intelligence f
 
 ## Harness examples (one-liners)
 
-**OpenCode** — project [`opencode.json`](opencode.json) already points at `http://127.0.0.1:4000/v1` with model `model-router/auto`. See [docs/OPENCODE.md](docs/OPENCODE.md).
+Self-host Prism, then point each client at **your** `/v1` (`https://<your-prism-host>/v1` or `$OPENAI_API_BASE`). Local snippets below assume `model-router` is already running.
+
+**OpenCode** — set `baseURL` to `https://<your-prism-host>/v1` with model `model-router/auto`. The shipped [`opencode.json`](opencode.json) is a **local example** (`http://127.0.0.1:4000/v1`) for after `model-router` is up. See [docs/OPENCODE.md](docs/OPENCODE.md).
 
 **Hermes** — in `~/.hermes/config.yaml`:
 
@@ -130,16 +135,17 @@ Enable deployments in [`config/models.yaml`](config/models.yaml). Intelligence f
 model:
   default: auto
   provider: custom
-  base_url: http://127.0.0.1:4000/v1
+  base_url: https://<your-prism-host>/v1
   api_key: unused
 ```
 
-See [docs/HERMES.md](docs/HERMES.md).
+Local example: `base_url: http://127.0.0.1:4000/v1`. See [docs/HERMES.md](docs/HERMES.md).
 
 **HolmesGPT** — OpenAI-compatible env + `openai/auto`:
 
 ```bash
-export OPENAI_API_BASE=http://127.0.0.1:4000/v1
+export OPENAI_API_BASE=https://<your-prism-host>/v1
+# Local example after model-router: export OPENAI_API_BASE=http://127.0.0.1:4000/v1
 export OPENAI_API_KEY=none
 holmes ask "what pods are failing?" --model=openai/auto
 ```

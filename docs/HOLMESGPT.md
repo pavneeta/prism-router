@@ -1,18 +1,27 @@
 # Use with HolmesGPT
 
-Point [HolmesGPT](https://github.com/HolmesGPT/holmesgpt) — the CNCF SRE agent — at Prism Router via Holmes’ **OpenAI-compatible** provider path ([docs](https://holmesgpt.dev/latest/ai-providers/openai-compatible/)).
+Point [HolmesGPT](https://github.com/HolmesGPT/holmesgpt) — the CNCF SRE agent — at **your** Prism Router `/v1` via Holmes’ **OpenAI-compatible** provider path ([docs](https://holmesgpt.dev/latest/ai-providers/openai-compatible/)).
 
 ```text
-HolmesGPT  --LiteLLM openai/*-->  Prism Router (:4000/v1)  --LiteLLM-->  Providers
+HolmesGPT  --LiteLLM openai/*-->  Prism Router (/v1)  --LiteLLM-->  Providers
                                   model: openai/auto  (or auto)
                                   tools / function calling required
 ```
 
-Provider API keys stay on the **gateway** (`.env`). Holmes only needs a placeholder `OPENAI_API_KEY` and `OPENAI_API_BASE` pointing at Prism.
+Self-host the gateway first. Holmes only needs a placeholder `OPENAI_API_KEY` and `OPENAI_API_BASE` pointing at **your** Prism `/v1` (`https://<your-prism-host>/v1`). Provider API keys stay on the **gateway** (`.env`). `http://127.0.0.1:4000/v1` is only the local example after `model-router` is running.
 
 > **Requirement:** HolmesGPT needs **function calling**. Enable tool-capable deployments in [`config/models.yaml`](../config/models.yaml) (OpenAI / Anthropic / Fireworks models that support tools).
 
 ## Quick start (CLI)
+
+```bash
+# Point Holmes at YOUR gateway
+export OPENAI_API_BASE="https://<your-prism-host>/v1"
+export OPENAI_API_KEY="none"   # required by LiteLLM; gateway ignores it
+holmes ask "what pods are failing?" --model="openai/auto"
+```
+
+**Local example** (after `model-router` is running):
 
 ```bash
 # terminal 1 — Prism
@@ -20,7 +29,7 @@ model-router
 
 # terminal 2 — Holmes
 export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
-export OPENAI_API_KEY="none"   # required by LiteLLM; gateway ignores it
+export OPENAI_API_KEY="none"
 holmes ask "what pods are failing?" --model="openai/auto"
 ```
 
@@ -29,7 +38,8 @@ holmes ask "what pods are failing?" --model="openai/auto"
 Optional session affinity (if your Holmes build forwards custom headers via LiteLLM `extra_headers`):
 
 ```bash
-export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+export OPENAI_API_BASE="https://<your-prism-host>/v1"
+# Local example: export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
 # Prefer a stable id per investigation / ticket
 ```
 
@@ -76,7 +86,7 @@ config:
 ## Smoke
 
 ```bash
-# gateway up on :4000
+# gateway up (local example: :4000)
 python scripts/holmesgpt_smoke.py
 ```
 
@@ -85,7 +95,10 @@ The smoke sends a Holmes-shaped chat completion **with tools** (function-calling
 ## Verify routing
 
 ```bash
-curl -s http://127.0.0.1:4000/v1/router/explain \
+export OPENAI_API_BASE="https://<your-prism-host>/v1"
+# Local example: export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+
+curl -s "$OPENAI_API_BASE/router/explain" \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "openai/auto",

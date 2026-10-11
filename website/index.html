@@ -170,7 +170,7 @@
           <p class="section-eyebrow"><span class="num tnum">02</span> · Drop-in</p>
           <h2 class="section-h" id="harness-h">Point your harness at <code class="inline-code">auto</code>.</h2>
           <p class="section-lede">
-            OpenAI-compatible chat completions (including <code>stream: true</code> SSE) and Anthropic-shaped messages. Provider keys stay on the gateway; OpenCode, Hermes, HolmesGPT, and similar clients only need a base URL and model id <code>auto</code>.
+            Self-host the gateway, then point any OpenAI-compatible client at <strong>your</strong> <code>/v1</code> — <code>https://&lt;your-prism-host&gt;/v1</code> or <code>OPENAI_API_BASE</code> — with model id <code>auto</code>. Provider keys stay on the gateway. <code>http://127.0.0.1:4000/v1</code> is only the local example after <code>model-router</code> is running.
           </p>
         </header>
 
@@ -178,9 +178,11 @@
           <article class="harness">
             <h3 class="harness__name">OpenCode</h3>
             <p class="harness__body">
-              Point your OpenAI-compatible provider at
-              <code>http://127.0.0.1:4000/v1</code>
+              Set <code>baseURL</code> to
+              <code>https://&lt;your-prism-host&gt;/v1</code>
               · model <code>auto</code>.
+              Local example after <code>model-router</code>:
+              <code>http://127.0.0.1:4000/v1</code>.
             </p>
             <a class="harness__link" href="docs?doc=OPENCODE">docs/OPENCODE.md →</a>
           </article>
@@ -188,16 +190,20 @@
             <h3 class="harness__name">Hermes Agent</h3>
             <p class="harness__body">
               Custom provider ·
-              <code>base_url: http://127.0.0.1:4000/v1</code>
+              <code>base_url: https://&lt;your-prism-host&gt;/v1</code>
               · model <code>auto</code>.
+              Local example:
+              <code>http://127.0.0.1:4000/v1</code>.
             </p>
             <a class="harness__link" href="docs?doc=HERMES">docs/HERMES.md →</a>
           </article>
           <article class="harness">
             <h3 class="harness__name">HolmesGPT</h3>
             <p class="harness__body">
-              <code>OPENAI_API_BASE=http://127.0.0.1:4000/v1</code>
+              <code>OPENAI_API_BASE=https://&lt;your-prism-host&gt;/v1</code>
               · model <code>openai/auto</code> · function calling required.
+              Local example:
+              <code>http://127.0.0.1:4000/v1</code>.
             </p>
             <a class="harness__link" href="docs?doc=HOLMESGPT">docs/HOLMESGPT.md →</a>
           </article>
@@ -208,11 +214,13 @@
         <div class="quick__grid">
           <header class="section-head section-head--flush reveal">
             <p class="section-eyebrow"><span class="num tnum">03</span> · Quick start</p>
-            <h2 class="section-h" id="start-h">Run the gateway locally.</h2>
+            <h2 class="section-h" id="start-h">Self-host, then point at your <code class="inline-code">/v1</code>.</h2>
             <p class="section-lede">
-              Point any OpenAI-compatible client at
-              <code class="inline-code">http://127.0.0.1:4000/v1</code>
-              and use model <code class="inline-code">auto</code>.
+              Run the gateway (local <code>model-router</code> or your container). Point any OpenAI-compatible client at
+              <code class="inline-code">https://&lt;your-prism-host&gt;/v1</code>
+              with model <code class="inline-code">auto</code>.
+              Local example after the CLI is up:
+              <code class="inline-code">http://127.0.0.1:4000/v1</code>.
             </p>
             <div class="hero__cta hero__cta--spaced">
               <a class="btn btn--primary" href="docs?doc=USAGE">
@@ -231,7 +239,7 @@
                 <span>request.json</span>
                 <span class="code-panel__chip tnum">200 OK</span>
               </div>
-              <pre><code><span class="c"># curl → http://127.0.0.1:4000/v1/chat/completions</span>
+              <pre><code><span class="c"># curl → $OPENAI_API_BASE/chat/completions</span>
 {
   <span class="k">"model"</span>: <span class="s" id="typed-line">"auto"</span>,
   <span class="k">"messages"</span>: [{
@@ -239,7 +247,8 @@
     <span class="k">"content"</span>: <span class="s">"Write a Python hello world."</span>
   }]
 }
-<span class="c"># OPENAI_API_BASE=http://127.0.0.1:4000/v1</span>
+<span class="c"># OPENAI_API_BASE=https://&lt;your-prism-host&gt;/v1</span>
+<span class="c"># Local example after model-router: http://127.0.0.1:4000/v1</span>
 <span class="c"># Header: X-Session-Id: demo-1</span></code></pre>
             </div>
 

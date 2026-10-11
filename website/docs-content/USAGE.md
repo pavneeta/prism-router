@@ -6,28 +6,21 @@ Run **Prism Router** locally or deploy your own container. See also [RAILWAY.md]
 
 ---
 
-## Run locally
+## Point your client
 
-Clone the repo, add provider keys, and run the gateway on your machine.
+Prism is a **self-hosted** OpenAI-compatible gateway. After you run it (local CLI or your container), point every client at **your** `/v1` — not a public Prism API.
 
-```bash
-git clone https://github.com/pavneeta/prism-router.git
-cd prism-router
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env   # add provider keys — never commit .env
-model-router           # http://127.0.0.1:4000
-```
-
-| | |
+| Setup | API base |
 | --- | --- |
-| **Gateway** | `http://127.0.0.1:4000` |
-| **API base** | `http://127.0.0.1:4000/v1` |
+| **Self-hosted / deployed** | `https://<your-prism-host>/v1` — or set `OPENAI_API_BASE` |
+| **Local example** | `http://127.0.0.1:4000/v1` — only after `model-router` is running |
 | **Model** | `auto` or `model-router/auto` |
-| **Client auth** | Optional: set `MODEL_ROUTER_API_KEYS` and pass `Authorization: Bearer <key>` or `X-Api-Key` |
+| **Client auth** | On public URLs, set `MODEL_ROUTER_API_KEYS` and pass `Authorization: Bearer <key>` or `X-Api-Key` |
 
 ```bash
-export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
+export OPENAI_API_BASE="https://<your-prism-host>/v1"
+# Local example (after `model-router` is running):
+# export OPENAI_API_BASE="http://127.0.0.1:4000/v1"
 
 curl -sS "$OPENAI_API_BASE/chat/completions" \
   -H "Content-Type: application/json" \
@@ -39,6 +32,21 @@ curl -sS "$OPENAI_API_BASE/chat/completions" \
 ```
 
 Deploy your own host with Docker / **[RAILWAY.md](RAILWAY.md)** (or any container platform). On any public URL, set `MODEL_ROUTER_API_KEYS`.
+
+---
+
+## Run locally
+
+Clone the repo, add provider keys, and run the gateway on your machine. Then use the **local example** base above.
+
+```bash
+git clone https://github.com/pavneeta/prism-router.git
+cd prism-router
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env   # add provider keys — never commit .env
+model-router           # local example: http://127.0.0.1:4000
+```
 
 ---
 
@@ -106,9 +114,8 @@ Fireworks tip: provider `cached_tokens` show up reliably on multi-turn / identic
 `GET /v1/router/metrics/usage` exposes in-process token usage aggregated by session, selected model, and provider type (`openai` / `anthropic` / `fireworks` / …). Optional query filters: `session_id`, `model`, `provider`.
 
 ```bash
-curl -sS "$OPENAI_API_BASE/../router/metrics/usage?session_id=demo-1"
-# or absolute:
-curl -sS "http://127.0.0.1:4000/v1/router/metrics/usage?session_id=demo-1"
+curl -sS "$OPENAI_API_BASE/router/metrics/usage?session_id=demo-1"
+# Local example: http://127.0.0.1:4000/v1/router/metrics/usage?session_id=demo-1
 ```
 
 Response includes `totals`, `by_session`, `by_model`, `by_provider`, plus `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens` (when the provider reports them), `request_count`, `est_cost_usd`, and `actual_cost_usd`. Streaming completions record usage when the provider sends it on a final chunk (OpenAI-, Together-, and Fireworks-compatible streams request `stream_options.include_usage`).
