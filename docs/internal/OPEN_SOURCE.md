@@ -17,7 +17,7 @@ https://github.com/pavneeta/prism-router-private — see `docs/private/RAILWAY_P
 - [x] Public tree: `up.railway.app` only as `<your-service>` placeholders (`rg 'up.railway.app' README.md docs/ website/`)
 - [x] Merge **PR #6** and **PR #5** into `main`
 - [x] `pytest -q` after merge (93 passed on Together release branch)
-- [ ] Redeploy Vercel site from `main` (`cd website && npx vercel@latest --prod` if GitHub hook lags)
+- [x] Redeploy Vercel site from `main` (`cd website && npx vercel@latest --prod` if GitHub hook lags)
 
 ### Sat (secrets & smoke)
 
@@ -30,10 +30,11 @@ https://github.com/pavneeta/prism-router-private — see `docs/private/RAILWAY_P
 
 - [x] Final scan: no private hostnames in working tree (`rg -i 'railway\.app' --glob '!docs/internal/stress_runs/**'`)
 - [ ] Optional: history scrub for old production URLs in git (see below) — **only with explicit approval**; not required if tree is clean
-- [ ] `gh repo edit pavneeta/prism-router --visibility public`
-- [ ] Verify README + [prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) look correct
+- [x] `gh repo edit pavneeta/prism-router --visibility public`
+- [x] Verify README + [prism-router-ten.vercel.app](https://prism-router-ten.vercel.app) look correct
 - [ ] Optional: make GHCR package public (Settings → Packages → `prism-router` → Change visibility)
 - [ ] Announce / watch Issues for first contributors
+- [x] Verify roadmap Issues #8–#14 are anonymously visible
 
 ---
 
