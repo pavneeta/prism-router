@@ -59,6 +59,9 @@ model-router           # local example: http://127.0.0.1:4000
 # Explain a route without starting the gateway
 model-router why "Write a Python function that merges two lists."
 
+# Interactive local getting-started CLI (does not start the gateway)
+model-router ui
+
 # Write harness presets (placeholder host + local 127.0.0.1 example)
 model-router init opencode
 ```

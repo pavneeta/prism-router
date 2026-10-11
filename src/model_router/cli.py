@@ -34,6 +34,10 @@ def main(argv: list[str] | None = None) -> int:
         from model_router.init_cmd import main as init_main
 
         return init_main(rest)
+    if command == "ui":
+        from model_router.ui import main as ui_main
+
+        return ui_main(rest)
 
     ap = argparse.ArgumentParser(
         prog="model-router",
@@ -42,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "command",
         nargs="?",
-        help="serve (default) | why | init",
+        help="serve (default) | why | init | ui",
     )
     ap.print_help()
     print(f"\nUnknown command: {command}", file=sys.stderr)
