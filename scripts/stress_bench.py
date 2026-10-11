@@ -45,6 +45,13 @@ DEFAULT_MODELS = [
     "zai/glm-5.2",
 ]
 
+# Fresh Together.ai panel (use with TOGETHER_API_KEY on gateway):
+TOGETHER_BENCH_MODELS = [
+    "auto",
+    "together/deepseek-v4-pro",
+    "together/glm-5.3-flash",
+]
+
 FAMILY = {
     "auto": "router",
     "openai/gpt-4o-mini": "openai",
@@ -52,9 +59,14 @@ FAMILY = {
     "openai/gpt-5.6-sol": "openai",
     "anthropic/claude-sonnet-5": "anthropic",
     "anthropic/claude-opus-5": "anthropic",
-    "deepseek/deepseek-v4-pro": "open",
-    "moonshot/kimi-k3": "open",
-    "zai/glm-5.2": "open",
+    # Stable open-weight IDs currently resolve to Together.ai by default.
+    "deepseek/deepseek-v4-pro": "together",
+    "moonshot/kimi-k3": "together",
+    "zai/glm-5.2": "together",
+    "minimax/minimax-m3": "together",
+    "together/deepseek-v4.1-flash": "together",
+    "together/deepseek-v4-pro": "together",
+    "together/glm-5.3-flash": "together",
 }
 
 HARD_CODING = {
@@ -140,6 +152,8 @@ def detect_available_families() -> set[str]:
         families.add("anthropic")
     if os.environ.get("FIREWORKS_API_KEY"):
         families.add("open")
+    if os.environ.get("TOGETHER_API_KEY"):
+        families.add("together")
     return families
 
 
@@ -388,6 +402,11 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--token-budget", type=int, default=2_800_000)
     ap.add_argument("--models", default=",".join(DEFAULT_MODELS))
+    ap.add_argument(
+        "--together-panel",
+        action="store_true",
+        help="Use auto + Together catalog models (needs TOGETHER_API_KEY on gateway)",
+    )
     ap.add_argument("--tasks", default="")
     ap.add_argument("--force-all-models", action="store_true")
     ap.add_argument("--scenarios", type=Path, default=SCENARIOS)
@@ -406,6 +425,9 @@ def main() -> int:
         from subprocess import check_call
 
         check_call([sys.executable, str(ROOT / "scripts" / "generate_stress_scenarios.py")])
+
+    if args.together_panel:
+        args.models = ",".join(TOGETHER_BENCH_MODELS)
 
     tasks = {t.strip() for t in args.tasks.split(",") if t.strip()} or None
     scenarios = load_scenarios(args.scenarios, limit=args.limit, tasks=tasks)

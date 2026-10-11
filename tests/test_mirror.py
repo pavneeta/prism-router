@@ -25,6 +25,7 @@ def _reset_state(monkeypatch, tmp_path):
     monkeypatch.setenv("MODEL_ROUTER_MIRROR_MODE", "true")
     monkeypatch.setenv("MODEL_ROUTER_MIRROR_PATH", str(tmp_path / "mirror.jsonl"))
     monkeypatch.setenv("MODEL_ROUTER_MIRROR_JUDGE", "false")
+    monkeypatch.setenv("TOGETHER_API_KEY", "test-only")
     get_settings.cache_clear()
     clear_config_caches()
     reset_prompt_cache_for_tests()

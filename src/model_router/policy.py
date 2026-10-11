@@ -11,6 +11,7 @@ from model_router.config import (
 )
 from model_router.prompt_cache import SessionAffinity
 from model_router.provider_health import ProviderHealthTracker, get_provider_health
+from model_router.litellm_backend import provider_credential_available
 
 
 @dataclass(frozen=True)
@@ -61,14 +62,37 @@ class SelectionPolicy:
         policy: PolicyConfig,
         benchmarks: BenchmarksConfig,
         models: ModelsConfig,
+        require_credentials: bool = False,
     ) -> None:
         self.policy = policy
         self.benchmarks = benchmarks
         self.models = models
         self._enabled = {d.id: d for d in models.deployments if d.enabled}
+        self._auto = {
+            d.id: d for d in models.deployments if d.enabled and d.auto_select
+        }
+        self.require_credentials = require_credentials
 
     def enabled_deployment(self, model_id: str) -> Deployment | None:
         return self._enabled.get(model_id)
+
+    def viable_auto_deployments(self) -> dict[str, Deployment]:
+        if not self.require_credentials:
+            return dict(self._auto)
+        return {
+            mid: deployment
+            for mid, deployment in self._auto.items()
+            if provider_credential_available(deployment.litellm_model)
+        }
+
+    def _deployment_viable(self, model_id: str) -> bool:
+        deployment = self._enabled.get(model_id)
+        if deployment is None:
+            return False
+        return (
+            not self.require_credentials
+            or provider_credential_available(deployment.litellm_model)
+        )
 
     def select(
         self,
@@ -89,6 +113,11 @@ class SelectionPolicy:
         health = provider_health or get_provider_health()
 
         if classification_confidence < self.policy.min_classification_confidence:
+            if not self._deployment_viable(self.policy.safe_fallback_model):
+                raise RuntimeError(
+                    "safe fallback provider credential unavailable: "
+                    f"{self.policy.safe_fallback_model}"
+                )
             return self._decision_for_forced(
                 model_id=self.policy.safe_fallback_model,
                 task_type=task_type,
@@ -99,14 +128,14 @@ class SelectionPolicy:
                 cached_tokens=0,
                 reason="low_classification_confidence",
                 eligible=[],
-                considered=list(self._enabled),
+                considered=list(self.viable_auto_deployments()),
                 sticky_model=sticky_id,
             )
 
         considered: list[str] = []
         eligible: list[tuple[str, float, float, int, ModelBenchmark]] = []
 
-        for model_id, deployment in self._enabled.items():
+        for model_id, deployment in self.viable_auto_deployments().items():
             bench = self.benchmarks.models.get(model_id)
             if bench is None:
                 continue
@@ -147,6 +176,11 @@ class SelectionPolicy:
             eligible.append((model_id, acc, cost, cached_tokens, bench))
 
         if not eligible:
+            if not considered:
+                raise RuntimeError(
+                    "no viable auto deployments: configure a provider credential "
+                    "for an enabled auto_select deployment"
+                )
             best_id = None
             best_acc = -1.0
             for model_id in considered:
@@ -156,6 +190,8 @@ class SelectionPolicy:
                     best_acc = acc
                     best_id = model_id
             forced = best_id or self.policy.safe_fallback_model
+            if not self._deployment_viable(forced):
+                raise RuntimeError(f"no credential available for fallback model {forced}")
             return self._decision_for_forced(
                 model_id=forced,
                 task_type=task_type,

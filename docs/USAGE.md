@@ -111,9 +111,10 @@ curl -sS "$OPENAI_API_BASE/../router/metrics/usage?session_id=demo-1"
 curl -sS "http://127.0.0.1:4000/v1/router/metrics/usage?session_id=demo-1"
 ```
 
-Response includes `totals`, `by_session`, `by_model`, `by_provider`, plus `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens` (when the provider reports them), `request_count`, `est_cost_usd`, and `actual_cost_usd`. Streaming completions record usage when the provider sends it on a final chunk (OpenAI-family requests `stream_options.include_usage`).
+Response includes `totals`, `by_session`, `by_model`, `by_provider`, plus `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens` (when the provider reports them), `request_count`, `est_cost_usd`, and `actual_cost_usd`. Streaming completions record usage when the provider sends it on a final chunk (OpenAI-, Together-, and Fireworks-compatible streams request `stream_options.include_usage`).
 
-Unauthenticated like `/ready` and other `/v1/router/*` debug endpoints — treat as internal.
+When client auth or public mode is enabled, this global endpoint requires
+`X-Admin-Api-Key` matching `MODEL_ROUTER_ADMIN_API_KEY`.
 
 **Replica caveat:** metrics are **per gateway process**. With Railway `numReplicas=2` (or any multi-replica deploy), each replica only reports its own traffic; totals are not cluster-wide.
 
@@ -148,7 +149,9 @@ Works for both **auto** (`auto` / `model-router/auto`) and **passthrough** (expl
 | Local exact-match cache | Bypassed when `stream: true` (non-stream only). |
 | Mirror mode | Shadow auto-eval is skipped for streamed requests. |
 | Dry-run | Returns synthetic SSE (`[dry-run] …`) so clients can exercise `stream: true` without provider spend. |
-| Railway replicas | Streaming works with multiple replicas; session affinity / prompt-cache stickiness remains in-memory per process (same as non-stream). |
+| Timeouts | Streams have configurable idle and total deadlines; disconnects close the upstream iterator. |
+| Retry | Non-stream requests retry one retryable timeout/429/5xx once. Streams are never replayed after bytes are emitted; auth/permission failures are never retried. |
+| Railway replicas | Streaming works with multiple replicas. Set `MODEL_ROUTER_REDIS_URL` for shared session affinity across replicas. |
 
 ## Config
 

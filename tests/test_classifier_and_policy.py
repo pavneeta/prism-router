@@ -132,12 +132,12 @@ def test_policy_code_requires_strong_coding_scores():
         classification_confidence=0.9,
         prompt_text="Implement a binary search in Rust",
     )
-    # DeepSWE-only codegen + 0.65 floor: GLM 0.438 / Sonnet 0.538 / DeepSeek (no DeepSWE) out.
-    # Cheapest eligible with DeepSWE ≥ 0.65 is gpt-5.6-luna (0.672).
-    assert decision.selected_model == "openai/gpt-5.6-luna"
+    # Live-validated Together MiniMax clears the floor and is cheapest.
+    assert decision.selected_model == "minimax/minimax-m3"
     assert "zai/glm-5.2" not in decision.eligible_models
-    assert "deepseek/deepseek-v4-pro" not in decision.eligible_models
-    assert "moonshot/kimi-k3" in decision.eligible_models
+    assert "deepseek/deepseek-v4-pro" in decision.eligible_models
+    # Together defaults remain passthrough-only until live validation is complete.
+    assert "moonshot/kimi-k3" not in decision.eligible_models
     assert "anthropic/claude-fable-5" in decision.eligible_models
     assert decision.selected_accuracy >= 0.65
 
@@ -154,19 +154,9 @@ def test_policy_tool_use_prefers_terminal_bench_eligible():
         prompt_text="Use tools to diagnose the failing deploy",
         likely_prefix_reuse=True,
     )
-    # deepseek TB 0.65 < 0.70 floor; kimi/luna/terra/... eligible — cheapest among them
+    # Live-validated MiniMax tool-use score clears the floor at lowest cost.
     assert decision.selected_accuracy >= 0.70
-    assert "deepseek/deepseek-v4-pro" not in decision.eligible_models
-    assert decision.selected_model in {
-        "zai/glm-5.2",
-        "openai/gpt-5.6-luna",
-        "moonshot/kimi-k3",
-        "openai/gpt-5.6-terra",
-        "anthropic/claude-fable-5",
-        "anthropic/claude-sonnet-5",
-        "openai/gpt-5.6-sol",
-        "anthropic/claude-opus-5",
-    }
+    assert decision.selected_model == "minimax/minimax-m3"
 
 
 def test_session_affinity_preserves_model():
@@ -290,7 +280,7 @@ def test_local_prompt_cache_roundtrip():
 def test_get_prompt_cache_wires_policy_ttls():
     cache = get_prompt_cache()
     policy = load_policy()
-    assert cache.enabled == policy.prompt_cache_enabled
+    assert cache.enabled == policy.local_response_cache_enabled
     assert cache.ttl_seconds == policy.local_cache_ttl_seconds
     assert cache.affinity_ttl_seconds == policy.session_affinity_ttl_seconds
 

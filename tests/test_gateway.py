@@ -57,7 +57,7 @@ def test_dry_run_chat_completions(client: TestClient):
     assert data["model_router"]["cache"]["hit"] is False
 
 
-def test_local_cache_hit_second_identical_request(client: TestClient):
+def test_local_response_cache_disabled_by_default(client: TestClient):
     body = {
         "model": "model-router/auto",
         "temperature": 0,
@@ -70,10 +70,7 @@ def test_local_cache_hit_second_identical_request(client: TestClient):
     second = client.post("/v1/chat/completions", json=body)
     assert second.status_code == 200
     data = second.json()
-    assert data["model_router"]["cache"]["hit"] is True
-    assert data["model_router"]["cache"]["layer"] == "local"
-    # Same dry-run content / model as first response
-    assert data["choices"][0]["message"]["content"] == first.json()["choices"][0]["message"]["content"]
+    assert data["model_router"]["cache"]["hit"] is False
 
 
 def test_session_affinity_header(client: TestClient):
@@ -89,7 +86,7 @@ def test_session_affinity_header(client: TestClient):
     assert first.status_code == 200
     selected = first.json()["model_router"]["decision"]["selected_model"]
 
-    affinity = get_prompt_cache().get_affinity("agent-session-test-1")
+    affinity = get_prompt_cache().get_affinity("anonymous:agent-session-test-1")
     assert affinity is not None
     assert affinity.model_id == selected
 
@@ -131,6 +128,7 @@ def test_streaming_dry_run_sse(client: TestClient):
 @pytest.mark.asyncio
 async def test_streaming_mocked_litellm(monkeypatch, tmp_path):
     monkeypatch.setenv("MODEL_ROUTER_DRY_RUN", "false")
+    monkeypatch.setenv("TOGETHER_API_KEY", "test-only")
     monkeypatch.setenv("MODEL_ROUTER_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
     get_settings.cache_clear()
     clear_config_caches()

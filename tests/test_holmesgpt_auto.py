@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from model_router.config import clear_config_caches, get_settings
 from model_router.gateway import app, _is_auto_model
 
 
@@ -12,6 +13,8 @@ def test_is_auto_model_holmes_openai_prefix():
 
 def test_explain_accepts_openai_auto(monkeypatch):
     monkeypatch.setenv("MODEL_ROUTER_DRY_RUN", "true")
+    get_settings.cache_clear()
+    clear_config_caches()
     client = TestClient(app)
     resp = client.post(
         "/v1/router/explain",
@@ -36,3 +39,5 @@ def test_explain_accepts_openai_auto(monkeypatch):
     data = resp.json()
     assert data.get("decision", {}).get("selected_model")
     assert data["classification"]["task_type"]
+    get_settings.cache_clear()
+    clear_config_caches()

@@ -1,7 +1,7 @@
 # Initial intelligence seed from public leaderboards (see docs/BENCHMARKS.md).
 # snapshot: DeepSWE 2026-07-25; AA / Terminal-Bench / Arena ~2026-07
 schema_version: 1
-snapshot_date: "2026-07-28"
+snapshot_date: "2026-10-11"
 sources_docs: docs/BENCHMARKS.md
 
 # Raw source keys (optional per model):
@@ -60,9 +60,9 @@ models:
 
   anthropic/claude-sonnet-5:
     context_window: 1000000
-    input_cost_per_m: 3.00
-    output_cost_per_m: 15.00
-    cached_input_cost_per_m: 0.30
+    input_cost_per_m: 2.70
+    output_cost_per_m: 13.50
+    cached_input_cost_per_m: 0.27
     supports_prompt_caching: true
     p50_latency_ms: 900
     sources:
@@ -103,58 +103,76 @@ models:
   # --- Strong open-weight / low-cost (primary routing targets) ---
   moonshot/kimi-k3:
     context_window: 1048576
-    input_cost_per_m: 3.00
-    output_cost_per_m: 15.00
-    cached_input_cost_per_m: 0.30
-    supports_prompt_caching: true
+    input_cost_per_m: 2.70
+    output_cost_per_m: 13.50
+    cached_input_cost_per_m: 0.27
+    supports_prompt_caching: false
     p50_latency_ms: 1100
     sources:
       deepswe: 0.685
       terminal_bench_v2_1: 0.883
       aa_intelligence_index: 57
       arena_elo: 1486
-    notes: "Fireworks Standard $3/$0.30/$15; DeepSWE 68.5% (~tie Fable); AA 57; Arena Frontend Code #1"
+    notes: "Together moonshotai/Kimi-K3 $2.70/$0.27/$13.50; DeepSWE 68.5% (~tie Fable); AA 57"
 
   zai/glm-5.2:
     context_window: 1000000
     input_cost_per_m: 1.40
     output_cost_per_m: 4.40
-    cached_input_cost_per_m: 0.14
-    supports_prompt_caching: true
+    cached_input_cost_per_m: 0.26
+    supports_prompt_caching: false
     p50_latency_ms: 500
     sources:
       deepswe: 0.438
       terminal_bench_v2_1: 0.827
       aa_intelligence_index: 51
       arena_elo: 1471
-    notes: "Fireworks Standard $1.40/$0.14/$4.40; DeepSWE 43.8% (below coding floor); strong TB"
+    notes: "Together zai-org/GLM-5.2 $1.40/$0.26/$4.40; DeepSWE 43.8% (below coding floor); strong TB"
 
   deepseek/deepseek-v4-pro:
-    context_window: 1000000
-    input_cost_per_m: 1.74
-    output_cost_per_m: 3.48
-    cached_input_cost_per_m: 0.145
-    supports_prompt_caching: true
+    context_window: 1048576
+    input_cost_per_m: 1.32
+    output_cost_per_m: 3.96
+    cached_input_cost_per_m: 0.13
+    supports_prompt_caching: false
     p50_latency_ms: 800
     sources:
       swe_bench_verified: 0.806
       terminal_bench_v2_1: 0.65
       aa_intelligence_index: 44
       arena_elo: 1462
-    notes: "Fireworks Standard $1.74/$0.145/$3.48; SWE~80.6% (no DeepSWE → ineligible for code_generation); AA~44; TB~65%"
+    accuracy:
+      code_generation: 0.75
+      code_review_debug: 0.8333
+      creative_writing: 0.60
+      extraction_qa: 0.8333
+      general_chat: 0.8333
+      reasoning_math: 1.0
+      summarization: 1.0
+      tool_use_agent: 1.0
+    notes: "Together DeepSeek-V4-Pro-0813 $1.32/$0.13/$3.96; live 50-scenario validation 20261011T014553Z (43/50 quality pass)"
 
   minimax/minimax-m3:
-    context_window: 1000000
+    context_window: 524288
     input_cost_per_m: 0.30
     output_cost_per_m: 1.20
     cached_input_cost_per_m: 0.06
-    supports_prompt_caching: true
+    supports_prompt_caching: false
     p50_latency_ms: 600
     sources:
       terminal_bench_v2_1: 0.66
       aa_intelligence_index: 44
       arena_elo: 1450
-    notes: "Fireworks Standard $0.30/$0.06/$1.20; AA open-weight tier; Terminal-Bench ~66%"
+    accuracy:
+      code_generation: 0.875
+      code_review_debug: 1.0
+      creative_writing: 0.80
+      extraction_qa: 0.8333
+      general_chat: 1.0
+      reasoning_math: 1.0
+      summarization: 1.0
+      tool_use_agent: 1.0
+    notes: "Together MiniMaxAI/MiniMax-M3 $0.30/$0.06/$1.20; live 50-scenario validation 20261011T014959Z (47/50 quality pass)"
 
   meta-llama/llama-4-maverick:
     context_window: 1000000
@@ -217,3 +235,44 @@ models:
       aa_intelligence_index: 22
       arena_elo: 1360
     notes: "Legacy cheap OpenAI; weak vs 2026 coding/agent floors — useful for chat only"
+
+  # --- Together.ai hosted (pricing from Together API 2026-10; scores seeded conservatively) ---
+  together/deepseek-v4.1-flash:
+    context_window: 1048576
+    input_cost_per_m: 0.30
+    output_cost_per_m: 1.20
+    cached_input_cost_per_m: 0.006
+    supports_prompt_caching: false
+    p50_latency_ms: 700
+    sources:
+      deepswe: 0.62
+      terminal_bench_v2_1: 0.70
+      aa_intelligence_index: 42
+      arena_elo: 1450
+    notes: "Together deepseek-ai/DeepSeek-V4.1-Flash; DeepSWE/TB seeded pending harness refresh"
+
+  together/deepseek-v4-pro:
+    context_window: 1048576
+    input_cost_per_m: 1.32
+    output_cost_per_m: 3.96
+    supports_prompt_caching: false
+    p50_latency_ms: 900
+    sources:
+      deepswe: 0.65
+      terminal_bench_v2_1: 0.72
+      aa_intelligence_index: 45
+      arena_elo: 1460
+    notes: "Together DeepSeek-V4-Pro-0813"
+
+  together/glm-5.3-flash:
+    context_window: 1048575
+    input_cost_per_m: 0.15
+    output_cost_per_m: 0.50
+    supports_prompt_caching: false
+    p50_latency_ms: 500
+    sources:
+      deepswe: 0.45
+      terminal_bench_v2_1: 0.75
+      aa_intelligence_index: 48
+      arena_elo: 1455
+    notes: "Together zai-org/GLM-5.3-Flash (serverless)"

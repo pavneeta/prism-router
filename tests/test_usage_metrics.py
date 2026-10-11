@@ -295,7 +295,7 @@ async def test_streaming_records_usage_from_final_chunk(monkeypatch, tmp_path):
             assert resp.status_code == 200
             assert "[DONE]" in resp.text
 
-            metrics = get_usage_metrics().snapshot(session_id=sid)
+            metrics = get_usage_metrics().snapshot(session_id=f"anonymous:{sid}")
             assert metrics["totals"]["request_count"] == 1
             assert metrics["totals"]["prompt_tokens"] == 15
             assert metrics["totals"]["completion_tokens"] == 3

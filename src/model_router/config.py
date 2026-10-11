@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Optional Redis URL for cross-replica session affinity (+ optional shared local cache)
     model_router_redis_url: str = ""
     model_router_feedback_path: str = "logs/feedback.jsonl"
+    # Public mode fails closed unless client auth + a viable provider/fallback exist.
+    model_router_public_mode: bool = False
+    model_router_admin_api_key: str = ""
+    model_router_stream_idle_timeout_seconds: float = 30.0
+    model_router_stream_total_timeout_seconds: float = 300.0
 
     @property
     def config_dir(self) -> Path:
@@ -60,6 +65,9 @@ class PolicyConfig(BaseModel):
     min_classification_confidence: float = 0.35
     # Cache-aware routing
     prompt_cache_enabled: bool = True
+    # Exact response caching is off by default; provider prompt caching/affinity
+    # remains controlled by prompt_cache_enabled.
+    local_response_cache_enabled: bool = False
     local_cache_ttl_seconds: float = 300.0
     session_affinity_ttl_seconds: float = 1800.0
     # Prefer sticky model unless another is cheaper by this relative margin after cold pricing
@@ -85,10 +93,10 @@ class PolicyConfig(BaseModel):
 
 
 class ModelBenchmark(BaseModel):
-    context_window: int = 128000
-    input_cost_per_m: float
-    output_cost_per_m: float
-    cached_input_cost_per_m: float | None = None
+    context_window: int = Field(default=128000, gt=0)
+    input_cost_per_m: float = Field(ge=0)
+    output_cost_per_m: float = Field(ge=0)
+    cached_input_cost_per_m: float | None = Field(default=None, ge=0)
     supports_prompt_caching: bool = False
     p50_latency_ms: float | None = None
     # Raw public leaderboard metrics — see docs/BENCHMARKS.md
@@ -96,6 +104,14 @@ class ModelBenchmark(BaseModel):
     # Task accuracies in [0,1]. If empty/partial, derived from sources on load.
     accuracy: dict[str, float] = Field(default_factory=dict)
     notes: str | None = None
+
+    @field_validator("accuracy")
+    @classmethod
+    def _accuracy_in_range(cls, value: dict[str, float]) -> dict[str, float]:
+        invalid = {k: v for k, v in value.items() if not 0.0 <= float(v) <= 1.0}
+        if invalid:
+            raise ValueError(f"accuracy values must be in [0,1]: {invalid}")
+        return value
 
     def cached_input_rate(self) -> float:
         if self.cached_input_cost_per_m is not None:
@@ -116,10 +132,45 @@ class Deployment(BaseModel):
     id: str
     litellm_model: str
     enabled: bool = True
+    # Passthrough deployments may be enabled but excluded from auto until they
+    # have measured benchmark values.
+    auto_select: bool = True
 
 
 class ModelsConfig(BaseModel):
     deployments: list[Deployment]
+
+    @model_validator(mode="after")
+    def _unique_ids(self) -> "ModelsConfig":
+        ids = [d.id for d in self.deployments]
+        dupes = sorted({mid for mid in ids if ids.count(mid) > 1})
+        if dupes:
+            raise ValueError(f"duplicate deployment ids: {dupes}")
+        return self
+
+
+def validate_config_bundle(
+    *,
+    policy: PolicyConfig,
+    benchmarks: BenchmarksConfig,
+    models: ModelsConfig,
+) -> list[str]:
+    """Cross-file validation errors suitable for readiness diagnostics."""
+    errors: list[str] = []
+    enabled = {d.id: d for d in models.deployments if d.enabled}
+    auto = {mid: d for mid, d in enabled.items() if d.auto_select}
+    for mid in sorted(auto):
+        if mid not in benchmarks.models:
+            errors.append(f"auto deployment {mid!r} has no benchmark row")
+    for label, mid in (
+        ("safe_fallback_model", policy.safe_fallback_model),
+        ("frontier_model", policy.frontier_model),
+    ):
+        if mid not in enabled:
+            errors.append(f"{label} {mid!r} is not an enabled deployment")
+        if mid not in benchmarks.models:
+            errors.append(f"{label} {mid!r} has no benchmark row")
+    return errors
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -215,10 +266,21 @@ def get_selection_policy(config_dir: Path | None = None) -> Any:
     with _selection_lock:
         if _selection_policy is not None and _selection_policy_sig == sig:
             return _selection_policy
+        policy_cfg = load_policy(config_dir)
+        benchmarks_cfg = load_benchmarks(config_dir)
+        models_cfg = load_models(config_dir)
+        errors = validate_config_bundle(
+            policy=policy_cfg,
+            benchmarks=benchmarks_cfg,
+            models=models_cfg,
+        )
+        if errors:
+            raise ValueError("; ".join(errors))
         policy = SelectionPolicy(
-            policy=load_policy(config_dir),
-            benchmarks=load_benchmarks(config_dir),
-            models=load_models(config_dir),
+            policy=policy_cfg,
+            benchmarks=benchmarks_cfg,
+            models=models_cfg,
+            require_credentials=not get_settings().model_router_dry_run,
         )
         _selection_policy = policy
         _selection_policy_sig = sig

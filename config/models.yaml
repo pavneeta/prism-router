@@ -28,22 +28,52 @@ deployments:
     litellm_model: openai/gpt-5.6-luna
     enabled: true
 
-  # Open-weight / cost leaders on Fireworks serverless
+  # Open-weight defaults on Together.ai serverless (TOGETHER_API_KEY).
+  # Stable public catalog IDs stay provider-neutral; provider-specific Fireworks
+  # aliases below remain available for explicit fallback testing.
   - id: moonshot/kimi-k3
-    litellm_model: fireworks_ai/accounts/fireworks/models/kimi-k3
+    litellm_model: together_ai/moonshotai/Kimi-K3
     enabled: true
+    auto_select: false
 
   - id: zai/glm-5.2
-    litellm_model: fireworks_ai/accounts/fireworks/models/glm-5p2
+    litellm_model: together_ai/zai-org/GLM-5.2
     enabled: true
+    auto_select: false
 
   - id: deepseek/deepseek-v4-pro
-    litellm_model: fireworks_ai/accounts/fireworks/models/deepseek-v4-pro
+    litellm_model: together_ai/deepseek-ai/DeepSeek-V4-Pro-0813
     enabled: true
+    # Validated by live 50-scenario run 20261011T014553Z.
+    auto_select: true
 
   - id: minimax/minimax-m3
+    litellm_model: together_ai/MiniMaxAI/MiniMax-M3
+    enabled: true
+    # Validated by live 50-scenario run 20261011T014959Z.
+    auto_select: true
+
+  # Explicit Fireworks alternates. These aliases are passthrough-only because
+  # they intentionally have no benchmark rows and therefore are not auto-selected.
+  - id: fireworks/kimi-k3
+    litellm_model: fireworks_ai/accounts/fireworks/models/kimi-k3
+    enabled: true
+    auto_select: false
+
+  - id: fireworks/glm-5.2
+    litellm_model: fireworks_ai/accounts/fireworks/models/glm-5p2
+    enabled: true
+    auto_select: false
+
+  - id: fireworks/deepseek-v4-pro
+    litellm_model: fireworks_ai/accounts/fireworks/models/deepseek-v4-pro
+    enabled: true
+    auto_select: false
+
+  - id: fireworks/minimax-m3
     litellm_model: fireworks_ai/accounts/fireworks/models/minimax-m3
     enabled: true
+    auto_select: false
 
   # Llama 4 / 3.3 — remap when available on your account
   - id: meta-llama/llama-4-maverick
@@ -66,3 +96,19 @@ deployments:
   - id: openai/gpt-4o-mini
     litellm_model: openai/gpt-4o-mini
     enabled: true
+
+  # Together.ai serverless (TOGETHER_API_KEY) — see docs/TOGETHER.md
+  - id: together/deepseek-v4.1-flash
+    litellm_model: together_ai/deepseek-ai/DeepSeek-V4.1-Flash
+    enabled: true
+    auto_select: false
+
+  - id: together/deepseek-v4-pro
+    litellm_model: together_ai/deepseek-ai/DeepSeek-V4-Pro-0813
+    enabled: true
+    auto_select: false
+
+  - id: together/glm-5.3-flash
+    litellm_model: together_ai/zai-org/GLM-5.3-Flash
+    enabled: true
+    auto_select: false

@@ -102,13 +102,17 @@ class PromptCacheLayer:
         tools: list[dict[str, Any]] | None,
         temperature: float | None,
         max_tokens: int | None,
+        principal: str = "anonymous",
+        extra: dict[str, Any] | None = None,
     ) -> str:
         payload = {
+            "principal": principal,
             "model": model,
             "messages": messages,
             "tools": tools,
             "temperature": temperature,
             "max_tokens": max_tokens,
+            "extra": extra or {},
         }
         raw = json.dumps(payload, sort_keys=True, default=str)
         return hashlib.sha256(raw.encode()).hexdigest()
@@ -232,7 +236,7 @@ def get_prompt_cache() -> PromptCacheLayer:
     policy = load_policy()
     settings = get_settings()
     sig = (
-        policy.prompt_cache_enabled,
+        policy.local_response_cache_enabled,
         policy.local_cache_ttl_seconds,
         policy.session_affinity_ttl_seconds,
         policy.shared_local_cache_enabled,
@@ -241,7 +245,7 @@ def get_prompt_cache() -> PromptCacheLayer:
     with _cache_lock:
         if _default_cache is None:
             _default_cache = PromptCacheLayer(
-                enabled=policy.prompt_cache_enabled,
+                enabled=policy.local_response_cache_enabled,
                 ttl_seconds=policy.local_cache_ttl_seconds,
                 affinity_ttl_seconds=policy.session_affinity_ttl_seconds,
                 redis_url=settings.model_router_redis_url or None,
@@ -251,7 +255,7 @@ def get_prompt_cache() -> PromptCacheLayer:
             return _default_cache
         if _cache_policy_sig != sig:
             _default_cache.configure(
-                enabled=policy.prompt_cache_enabled,
+                enabled=policy.local_response_cache_enabled,
                 ttl_seconds=policy.local_cache_ttl_seconds,
                 affinity_ttl_seconds=policy.session_affinity_ttl_seconds,
                 redis_url=settings.model_router_redis_url or None,
