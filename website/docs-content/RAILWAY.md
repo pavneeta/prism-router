@@ -23,7 +23,7 @@ Streaming (`stream: true` on `/v1/chat/completions`) works on Railway the same a
 ## Production checklist
 
 1. **Client auth (required for public URLs):** set `MODEL_ROUTER_API_KEYS` to one or more random client keys. Without this, anyone can spend your provider budget. Clients send `Authorization: Bearer …` or `X-Api-Key`.
-2. **Replicas:** optional multi-replica behind one public URL (`railway.toml`). Railway does **not** guarantee sticky sessions — prompt-cache affinity and session task memory are **in-memory per process**, so cache/affinity may miss across replicas (routing still works). Shared Redis (or equivalent) is the follow-up for cross-replica affinity.
+2. **Replicas:** optional multi-replica behind one public URL (`railway.toml`). Railway does **not** guarantee HTTP sticky sessions. Set **`MODEL_ROUTER_REDIS_URL`** (Railway Redis plugin or external URL) so **session affinity** is shared across replicas. Install the Python `redis` package in your image (`pip install '.[redis]'` or add to Dockerfile). Session **task memory** and usage metrics remain per-replica unless you add a shared store later. Optional `shared_local_cache_enabled: true` in `config/policy.yaml` shares the local exact-match cache via Redis.
 3. **Dry-run / mirror:** `MODEL_ROUTER_DRY_RUN=false`, `MODEL_ROUTER_MIRROR_MODE=false` unless intentionally shadow-evaling (~2× spend).
 4. **Provider keys only on the service:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `FIREWORKS_API_KEY` (+ optional Together/Groq). Do **not** set client `OPENAI_API_BASE` on the Railway service to its own URL.
 5. **Telemetry path:** ephemeral FS — use `/tmp/model-router/telemetry.jsonl` (Dockerfile default). Writes fail soft; requests still succeed.
@@ -50,6 +50,8 @@ Set these as Railway **service variables** (never commit values):
 | `MODEL_ROUTER_PUBLIC_BASE` | Optional; production public URL (for self-base scrub) |
 | `MODEL_ROUTER_CORS_ORIGINS` | Optional allowlist or `*` |
 | `MODEL_ROUTER_RATE_LIMIT_RPM` | Optional in-process RPM; `0` = off |
+| `MODEL_ROUTER_REDIS_URL` | Optional Redis for cross-replica session affinity |
+| `MODEL_ROUTER_FEEDBACK_PATH` | Optional path for `/v1/router/feedback` JSONL |
 
 Railway injects `PORT`; the [`Dockerfile`](../Dockerfile) maps it to `MODEL_ROUTER_PORT`. Container runs as non-root `app` (uid 10001).
 

@@ -24,14 +24,23 @@ from model_router.config import (
     load_models,
     load_policy,
 )
-from model_router.litellm_backend import acompletion, apply_provider_cache_hints, completion_cost
+from model_router.litellm_backend import (
+    acompletion,
+    apply_provider_cache_hints,
+    completion_cost,
+    extract_token_usage,
+    provider_type,
+)
+from model_router.feedback import FeedbackEvent, get_feedback_logger
 from model_router.mirror import schedule_mirror_eval, should_mirror
+from model_router.provider_health import get_provider_health
 from model_router.policy import RoutingDecision, estimate_input_tokens
 from model_router.prompt_cache import get_prompt_cache
 from model_router.rate_limit import get_rate_limiter
 from model_router.safety import redact_secrets
 from model_router.sessions import apply_session_classification, get_session_store
 from model_router.telemetry import TelemetryEvent, TelemetryLogger, now_ts
+from model_router.usage_metrics import get_usage_metrics
 
 load_dotenv()
 
@@ -289,12 +298,18 @@ def _route(
 
     if _is_auto_model(requested_model, policy_cfg.auto_model_ids):
         affinity = cache.get_affinity(session_id) if policy_cfg.prompt_cache_enabled else None
+        sticky_ratio = sessions.observed_sticky_ratio(session_id)
         decision = get_selection_policy().select(
             task_type=classification.task_type,
             classification_confidence=classification.confidence,
             prompt_text=_prompt_text(messages),
             session_affinity=affinity,
             likely_prefix_reuse=_likely_prefix_reuse(messages, tools),
+            observed_sticky_ratio=sticky_ratio,
+        )
+        sessions.record_routing_turn(
+            session_id,
+            affinity_preserve=decision.reason == "session_affinity_preserve_prompt_cache",
         )
         return classification, decision, decision.litellm_model
     # Passthrough: remap catalog ids (e.g. moonshot/kimi-k3) to provider litellm ids.
@@ -351,8 +366,10 @@ def _emit(
     error: str | None = None,
     prompt_tokens: int | None = None,
     completion_tokens: int | None = None,
+    cached_tokens: int | None = None,
     actual_cost_usd: float | None = None,
 ) -> None:
+    est_cost = decision.estimated_cost_usd if decision else 0.0
     _telemetry().emit(
         TelemetryEvent(
             ts=now_ts(),
@@ -366,11 +383,12 @@ def _emit(
             classification_confidence=classification.confidence,
             classification_signals=classification.signals,
             policy_reason=decision.reason if decision else "passthrough",
-            estimated_cost_usd=decision.estimated_cost_usd if decision else 0.0,
+            estimated_cost_usd=est_cost,
             frontier_cost_usd=decision.frontier_cost_usd if decision else 0.0,
             cost_delta_vs_frontier_usd=decision.cost_delta_vs_frontier_usd if decision else 0.0,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
+            cached_tokens=cached_tokens,
             actual_cost_usd=actual_cost_usd,
             latency_ms=latency_ms,
             status=status,
@@ -388,12 +406,26 @@ def _emit(
         latency_ms=latency_ms,
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
-        estimated_cost_usd=decision.estimated_cost_usd if decision else 0.0,
+        estimated_cost_usd=est_cost,
         actual_cost_usd=actual_cost_usd,
         frontier_cost_usd=decision.frontier_cost_usd if decision else 0.0,
         cost_delta_vs_frontier_usd=decision.cost_delta_vs_frontier_usd if decision else 0.0,
         cache_hit=cache_hit,
         estimated_cached_tokens=decision.estimated_cached_tokens if decision else 0,
+    )
+    get_usage_metrics().record(
+        session_id=session_id,
+        model=selected_model,
+        provider=provider_type(litellm_model),
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        cached_tokens=cached_tokens,
+        est_cost_usd=est_cost,
+        actual_cost_usd=actual_cost_usd,
+    )
+    get_provider_health().record(
+        litellm_model=litellm_model,
+        success=status == "ok",
     )
 
 
@@ -477,6 +509,19 @@ async def ready() -> JSONResponse:
         benches = load_benchmarks()
         models = load_models()
         settings = get_settings()
+        cache = get_prompt_cache()
+        backend = cache.backend()
+        note = (
+            "Session affinity uses Redis when MODEL_ROUTER_REDIS_URL is set and reachable; "
+            "otherwise in-memory per process (sticky sessions not guaranteed across replicas)."
+        )
+        if backend == "in_memory":
+            note = (
+                "Session affinity and local prompt cache are in-memory per process. "
+                "With multiple replicas, sticky sessions are not guaranteed — "
+                "cache/affinity may miss across instances (routing still works). "
+                "Set MODEL_ROUTER_REDIS_URL for shared affinity."
+            )
         return JSONResponse(
             {
                 "status": "ready",
@@ -485,16 +530,13 @@ async def ready() -> JSONResponse:
                     "benchmarks": len(benches.models),
                     "deployments": len(models.deployments),
                     "prompt_cache_enabled": policy.prompt_cache_enabled,
+                    "shared_local_cache_enabled": policy.shared_local_cache_enabled,
                 },
                 "dry_run": settings.model_router_dry_run,
                 "mirror_mode": settings.model_router_mirror_mode,
-                # In-memory cache/affinity — not shared across replicas
-                "session_store": "in_memory",
-                "note": (
-                    "Session affinity and local prompt cache are in-memory per process. "
-                    "With multiple replicas, sticky sessions are not guaranteed — "
-                    "cache/affinity may miss across instances (routing still works)."
-                ),
+                "session_store": backend,
+                "provider_health": get_provider_health().snapshot(),
+                "note": note,
             }
         )
     except Exception as exc:  # noqa: BLE001
@@ -526,6 +568,50 @@ async def session_rollup(session_id: str) -> dict[str, Any]:
         ),
         "rollup": rollup.to_dict() if rollup else None,
     }
+
+
+@app.get("/v1/router/metrics/usage")
+async def usage_metrics(
+    session_id: str | None = None,
+    model: str | None = None,
+    provider: str | None = None,
+) -> dict[str, Any]:
+    """In-process token usage rollups by session, model, and provider.
+
+    Unauthenticated like ``/ready`` and other ``/v1/router/*`` debug endpoints.
+    Query filters: ``session_id``, ``model`` (catalog / selected id), ``provider``.
+    """
+    return get_usage_metrics().snapshot(
+        session_id=session_id,
+        model=model,
+        provider=provider,
+    )
+
+
+class RouterFeedbackRequest(BaseModel):
+    session_id: str
+    outcome: str  # pass | fail
+    task_hint: str | None = None
+    notes: str | None = None
+
+
+@app.post("/v1/router/feedback")
+async def router_feedback(body: RouterFeedbackRequest) -> dict[str, Any]:
+    """Append pass/fail outcome for offline benchmark loops (no online learning)."""
+    outcome = body.outcome.strip().lower()
+    if outcome not in {"pass", "fail"}:
+        raise HTTPException(status_code=400, detail="outcome must be pass or fail")
+    if not body.session_id.strip():
+        raise HTTPException(status_code=400, detail="session_id required")
+    event = FeedbackEvent(
+        ts=now_ts(),
+        session_id=body.session_id.strip(),
+        outcome=outcome,
+        task_hint=(body.task_hint or "").strip() or None,
+        notes=(body.notes or "").strip() or None,
+    )
+    get_feedback_logger().append(event)
+    return {"status": "recorded", "event": event.to_dict()}
 
 
 class AnthropicMessageBlock(BaseModel):
@@ -665,10 +751,16 @@ async def _stream_completion(
 ) -> AsyncIterator[str]:
     status = "ok"
     error: str | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    cached_tokens: int | None = None
     try:
         call_kwargs = dict(kwargs)
         if tools is not None:
             call_kwargs["tools"] = tools
+        # Ask OpenAI-family providers for a final usage chunk when streaming.
+        if "stream_options" not in call_kwargs and provider_type(litellm_model) == "openai":
+            call_kwargs["stream_options"] = {"include_usage": True}
         response = await acompletion(
             model=litellm_model,
             messages=messages,
@@ -682,6 +774,17 @@ async def _stream_completion(
                 data = chunk
             else:
                 data = dict(chunk)
+            usage = data.get("usage") if isinstance(data, dict) else None
+            if usage is None and hasattr(chunk, "usage"):
+                usage = getattr(chunk, "usage", None)
+            if usage is not None:
+                p, c, cached = extract_token_usage(usage)
+                if p is not None:
+                    prompt_tokens = p
+                if c is not None:
+                    completion_tokens = c
+                if cached is not None:
+                    cached_tokens = cached
             yield f"data: {json.dumps(data, default=str)}\n\n"
         yield "data: [DONE]\n\n"
     except Exception as exc:  # noqa: BLE001
@@ -703,7 +806,7 @@ async def _stream_completion(
             _update_affinity(
                 session_id=session_id,
                 decision=decision,
-                prompt_tokens=None,
+                prompt_tokens=prompt_tokens,
                 messages=body.messages,
             )
             _emit(
@@ -718,6 +821,9 @@ async def _stream_completion(
                 latency_ms=latency_ms,
                 status=status,
                 error=error,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cached_tokens=cached_tokens,
                 cache_layer=decision.cache_layer if decision else "none",
             )
         except Exception:  # noqa: BLE001 — best-effort post-stream bookkeeping
@@ -759,6 +865,9 @@ async def chat_completions(
             litellm_model = str(
                 decision_meta.get("litellm_model") or payload.get("model") or body.model
             )
+            cache_prompt, cache_completion, cache_cached = extract_token_usage(
+                payload.get("usage")
+            )
             _emit(
                 request_id=request_id,
                 session_id=x_session_id,
@@ -772,6 +881,9 @@ async def chat_completions(
                 status="ok",
                 cache_hit=True,
                 cache_layer="local",
+                prompt_tokens=cache_prompt,
+                completion_tokens=cache_completion,
+                cached_tokens=cache_cached,
             )
             return JSONResponse(payload)
 
@@ -956,8 +1068,7 @@ async def chat_completions(
 
     latency_ms = (time.perf_counter() - started) * 1000
     usage = getattr(response, "usage", None)
-    prompt_tokens = getattr(usage, "prompt_tokens", None) if usage else None
-    completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
+    prompt_tokens, completion_tokens, cached_tokens = extract_token_usage(usage)
     actual_cost = completion_cost(response)
 
     payload = response.model_dump() if hasattr(response, "model_dump") else dict(response)
@@ -1040,6 +1151,7 @@ async def chat_completions(
         error=error,
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
+        cached_tokens=cached_tokens,
         actual_cost_usd=actual_cost,
         cache_layer=decision.cache_layer if decision else "none",
     )

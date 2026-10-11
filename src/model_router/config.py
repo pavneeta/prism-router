@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Comma-separated client API keys. Empty = no client auth (local default).
     # Set on any public deploy so the internet cannot spend your provider keys.
     model_router_api_keys: str = ""
+    # Optional Redis URL for cross-replica session affinity (+ optional shared local cache)
+    model_router_redis_url: str = ""
+    model_router_feedback_path: str = "logs/feedback.jsonl"
 
     @property
     def config_dir(self) -> Path:
@@ -67,6 +70,15 @@ class PolicyConfig(BaseModel):
     prefer_caching_models_above_prefix_tokens: int = 1024
     # Fireworks reasoning models: disable visible thinking / CoT in content
     fireworks_hide_thinking: bool = True
+    # Soft latency bias: add (usd_per_ms * p50_latency_ms) to effective cost when > 0
+    latency_penalty_usd_per_ms: float = 0.0
+    # Multiply estimated cost by (1 + provider_health_penalty * ewma_error_rate)
+    provider_health_penalty: float = 1.5
+    provider_health_enabled: bool = True
+    # When Redis is configured, mirror local exact-match cache entries across replicas
+    shared_local_cache_enabled: bool = False
+    # Widen sticky margin when session shows high affinity preserve ratio (0 = off)
+    observed_sticky_margin_boost: float = 0.1
 
     def min_accuracy(self, task_type: str) -> float:
         return self.min_accuracy_by_task.get(task_type, self.default_min_accuracy)

@@ -79,10 +79,13 @@ model-router --mirror-mode --mirror-judge
 | Endpoint | Purpose |
 | --- | --- |
 | `POST /v1/chat/completions` | OpenAI-compatible (+ `stream` SSE) |
-| `POST /v1/messages` | Anthropic Messages-compatible (non-stream MVP) |
+| `POST /v1/messages` | Anthropic Messages-compatible (**non-stream**; use `/v1/chat/completions?stream=true` for SSE) |
 | `POST /v1/router/explain` | Classification + selection without calling a model |
 | `GET /v1/router/sessions/{id}` | Per-session telemetry rollup (tokens, $, cache hits) |
+| `GET /v1/router/metrics/usage` | In-process token usage by session / model / provider |
+| `POST /v1/router/feedback` | Pass/fail outcome for offline benchmark loops (JSONL) |
 | `GET /health` | Liveness |
+| `GET /ready` | Readiness (config load) |
 
 Use model `model-router/auto` or `auto`. Responses include a `model_router` block with classification and the selected model.
 
@@ -97,6 +100,28 @@ Send a stable `X-Session-Id` header (or `session_id` on `/v1/router/explain`) to
 Provider cache hints (when `prompt_cache_enabled` and the model supports caching): Anthropic gets `cache_control`; OpenAI/Fireworks get a session `prompt_cache_key`. Fireworks also receives `x-session-affinity` (KV cache is replica-local — keep a stable session id, and prefer a single gateway replica for affinity).
 
 Fireworks tip: provider `cached_tokens` show up reliably on multi-turn / identical retries with a long shared prefix (a few thousand tokens in practice). Very short prompts may stay at `cached_tokens: 0` even with affinity hints.
+
+### Usage metrics
+
+`GET /v1/router/metrics/usage` exposes in-process token usage aggregated by session, selected model, and provider type (`openai` / `anthropic` / `fireworks` / …). Optional query filters: `session_id`, `model`, `provider`.
+
+```bash
+curl -sS "$OPENAI_API_BASE/../router/metrics/usage?session_id=demo-1"
+# or absolute:
+curl -sS "http://127.0.0.1:4000/v1/router/metrics/usage?session_id=demo-1"
+```
+
+Response includes `totals`, `by_session`, `by_model`, `by_provider`, plus `prompt_tokens`, `completion_tokens`, `total_tokens`, `cached_tokens` (when the provider reports them), `request_count`, `est_cost_usd`, and `actual_cost_usd`. Streaming completions record usage when the provider sends it on a final chunk (OpenAI-family requests `stream_options.include_usage`).
+
+Unauthenticated like `/ready` and other `/v1/router/*` debug endpoints — treat as internal.
+
+**Replica caveat:** metrics are **per gateway process**. With Railway `numReplicas=2` (or any multi-replica deploy), each replica only reports its own traffic; totals are not cluster-wide.
+
+**Cross-replica affinity:** set `MODEL_ROUTER_REDIS_URL` (and install optional `redis` extra) so session affinity is shared across replicas. Optional `shared_local_cache_enabled: true` in `config/policy.yaml` mirrors the local exact-match cache in Redis too.
+
+### Outcome feedback
+
+`POST /v1/router/feedback` appends `{session_id, outcome: pass|fail, task_hint?, notes?}` to `MODEL_ROUTER_FEEDBACK_PATH` (default `logs/feedback.jsonl`). No online learning yet — intended for future benchmark loops.
 
 ### Streaming
 
@@ -148,6 +173,7 @@ Reasoning models on Fireworks can dump chain-of-thought into visible `content`. 
 - Per-request JSONL: path from `MODEL_ROUTER_TELEMETRY_PATH` (default `logs/telemetry.jsonl`)
 - Mirror shadow-eval JSONL: `MODEL_ROUTER_MIRROR_PATH` (default `logs/mirror.jsonl`) when `--mirror-mode` is on
 - Per-session rollups: `logs/session_rollups.jsonl` + HTTP `GET /v1/router/sessions/{id}`
+- In-process usage metrics: `GET /v1/router/metrics/usage` (per-replica; see [Usage metrics](#usage-metrics))
 - Offline CPT-style distribution: `python scripts/cpt_routing_eval.py`
 
 ## Smoke tests
