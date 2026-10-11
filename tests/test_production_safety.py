@@ -38,6 +38,14 @@ PROVIDER_ENV = {
 }
 
 
+@pytest.fixture(autouse=True)
+def reset_global_config_after_test():
+    yield
+    get_settings.cache_clear()
+    clear_config_caches()
+    reset_prompt_cache_for_tests()
+
+
 @pytest.mark.parametrize("provider", list(PROVIDER_ENV))
 def test_credential_aware_policy_each_provider(monkeypatch, provider: str):
     for env_name, _ in PROVIDER_ENV.values():

@@ -128,6 +128,7 @@ def test_streaming_dry_run_sse(client: TestClient):
 @pytest.mark.asyncio
 async def test_streaming_mocked_litellm(monkeypatch, tmp_path):
     monkeypatch.setenv("MODEL_ROUTER_DRY_RUN", "false")
+    monkeypatch.setenv("TOGETHER_API_KEY", "test-only")
     monkeypatch.setenv("MODEL_ROUTER_TELEMETRY_PATH", str(tmp_path / "telemetry.jsonl"))
     get_settings.cache_clear()
     clear_config_caches()
