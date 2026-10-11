@@ -108,6 +108,23 @@ def test_session_affinity_header(client: TestClient):
     )
 
 
+def test_opencode_stream_options_accepted(client: TestClient):
+    """OpenCode sends stream_options.include_usage; extra=forbid used to 422."""
+    resp = client.post(
+        "/v1/chat/completions",
+        headers={"X-Session-Id": "opencode-local"},
+        json={
+            "model": "model-router/auto",
+            "stream": True,
+            "stream_options": {"include_usage": True},
+            "messages": [{"role": "user", "content": "Reply with exactly: opencode-smoke-ok"}],
+        },
+    )
+    assert resp.status_code == 200
+    assert "text/event-stream" in resp.headers.get("content-type", "")
+    assert "data: " in resp.text
+
+
 def test_streaming_dry_run_sse(client: TestClient):
     resp = client.post(
         "/v1/chat/completions",

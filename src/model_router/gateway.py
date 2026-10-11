@@ -246,6 +246,8 @@ class ChatCompletionRequest(BaseModel):
     parallel_tool_calls: bool | None = None
     reasoning_effort: str | None = None
     max_completion_tokens: int | None = None
+    # OpenAI-compatible clients (OpenCode, etc.) send this on stream=true.
+    stream_options: dict[str, Any] | None = None
 
 
 class ExplainRequest(BaseModel):
@@ -531,6 +533,7 @@ def _completion_kwargs(body: ChatCompletionRequest, litellm_model: str | None = 
         "parallel_tool_calls",
         "reasoning_effort",
         "user",
+        "stream_options",
     ):
         value = getattr(body, field)
         if value is not None:
