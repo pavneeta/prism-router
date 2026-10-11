@@ -1,17 +1,54 @@
-# Initial intelligence seed from public leaderboards (see docs/BENCHMARKS.md).
-# snapshot: DeepSWE 2026-07-25; AA / Terminal-Bench / Arena ~2026-07
+# Public benchmark catalog (see docs/BENCHMARKS.md for provenance and caveats).
 schema_version: 1
 snapshot_date: "2026-10-11"
 sources_docs: docs/BENCHMARKS.md
 
 # Raw source keys (optional per model):
 #   deepswe                 — pass@1 [0,1]  DeepSWE v1.1 / mini-swe-agent
-#   swe_bench_verified      — % resolved [0,1] SWE-bench Verified
-#   terminal_bench_v2_1     — pass@1 [0,1] Terminal-Bench v2.1
+#   swe_bench_verified      — % resolved [0,1] official mini-SWE-agent rows only
+#   swe_rebench_resolved    — resolved rate [0,1] latest SWE-rebench window
+#   terminal_bench_v2_1     — pass@1 [0,1] historical AA Terminal-Bench (routing)
+#   terminal_bench_2        — accuracy [0,1] official Terminal-Bench 2.0 (diagnostic)
 #   aa_intelligence_index   — Artificial Analysis Intelligence Index (raw, ~0-70)
-#   arena_elo               — Arena AI / LMArena text Elo (or coding Elo when noted)
+#   arena_elo               — LMArena text style-control overall rating
+#   arena_coding_elo        — LMArena text style-control coding rating (diagnostic)
 #
 # Task accuracies are derived on load unless overridden under `accuracy:`.
+
+source_snapshots:
+  deepswe:
+    url: https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json
+    snapshot_date: "2026-09-22"
+    metric: "pass@1; mini-swe-agent; highest published effort"
+  swe_bench_verified:
+    url: https://www.swebench.com/index.html
+    snapshot_date: "2026-10-11"
+    metric: "% resolved; official mini-SWE-agent rows only"
+  swe_rebench_resolved:
+    url: https://swe-rebench.com/
+    snapshot_date: "2026-07-01"
+    metric: "Resolved Rate; latest public window; exact model rows"
+  terminal_bench_v2_1:
+    status: "retained historical AA-sourced routing scores from 2026-07"
+    note: "Official Terminal-Bench 2.0 uses a different scale and is stored separately."
+  terminal_bench_2:
+    url: https://www.tbench.ai/leaderboard/terminal-bench/2.0
+    snapshot_date: "2026-10-11"
+    data_through: "2026-09-29"
+    metric: "accuracy; official model+agent row; max reasoning effort; diagnostic only"
+  lmarena:
+    url: https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset
+    snapshot_date: "2026-10-08"
+    metric: "Bradley-Terry Arena rating; text_style_control latest; overall and coding"
+  artificial_analysis:
+    url: https://artificialanalysis.ai/data-api/docs
+    status: "unavailable without x-api-key; no key used"
+    current_version_seen: "4.3.2"
+    retained_score_snapshot: "2026-07"
+    note: "Existing AA values are historical and were not refreshed."
+  skipped:
+    livecodebench: "Not mapped: execution pass@1 is not directly comparable to current router agent metrics."
+    tau_bench: "Not mapped: domain/tool-policy and harness variants do not match a catalog source key."
 
 models:
   # --- Frontier baselines (Δ$ reference + high intelligence floor) ---
@@ -24,10 +61,13 @@ models:
     p50_latency_ms: 1200
     sources:
       deepswe: 0.727
+      swe_rebench_resolved: 0.623
       terminal_bench_v2_1: 0.895
+      terminal_bench_2: 0.373
       aa_intelligence_index: 59
-      arena_elo: 1485
-    notes: "DeepSWE gpt-5.6-sol[max]; AA Sol(max); Terminal-Bench ~89.5% (AA)"
+      arena_elo: 1485.067
+      arena_coding_elo: 1534.910
+    notes: "DeepSWE max; SWE-rebench medium; official TB 2.0 Codex/max diagnostic; AA/TB v2.1 retained from 2026-07"
 
   anthropic/claude-fable-5:
     context_window: 1000000
@@ -37,11 +77,14 @@ models:
     supports_prompt_caching: true
     p50_latency_ms: 1600
     sources:
-      deepswe: 0.70
+      deepswe: 0.697
+      swe_rebench_resolved: 0.645
       terminal_bench_v2_1: 0.846
+      terminal_bench_2: 0.445
       aa_intelligence_index: 60
-      arena_elo: 1505
-    notes: "DeepSWE claude-fable-5[max] ~70%; Anthropic flagship ($10/$50); near-tie with Kimi on DeepSWE"
+      arena_elo: 1503.694
+      arena_coding_elo: 1551.426
+    notes: "DeepSWE max; SWE-rebench high; official TB 2.0 Claude Code/max diagnostic; AA/TB v2.1 retained from 2026-07"
 
   anthropic/claude-opus-5:
     context_window: 1000000
@@ -52,11 +95,13 @@ models:
     p50_latency_ms: 1400
     sources:
       deepswe: 0.736
-      swe_bench_verified: 0.886
+      swe_rebench_resolved: 0.634
       terminal_bench_v2_1: 0.891
+      terminal_bench_2: 0.518
       aa_intelligence_index: 61
-      arena_elo: 1495
-    notes: "DeepSWE claude-opus-5[max] 73.6%; AA Index leader 61; SWE-bench ~88.6% (Opus 4.8/5 class)"
+      arena_elo: 1489.410
+      arena_coding_elo: 1529.575
+    notes: "DeepSWE max; SWE-rebench high; no official mini-SWE-agent Verified row; AA/TB v2.1 retained from 2026-07"
 
   anthropic/claude-sonnet-5:
     context_window: 1000000
@@ -67,10 +112,13 @@ models:
     p50_latency_ms: 900
     sources:
       deepswe: 0.538
+      swe_rebench_resolved: 0.568
       terminal_bench_v2_1: 0.81
+      terminal_bench_2: 0.124
       aa_intelligence_index: 52
-      arena_elo: 1470
-    notes: "DeepSWE claude-sonnet-5[max] 53.8%"
+      arena_elo: 1461.016
+      arena_coding_elo: 1519.066
+    notes: "DeepSWE max; SWE-rebench high; official TB 2.0 Claude Code/max diagnostic; AA/TB v2.1 retained from 2026-07"
 
   openai/gpt-5.6-terra:
     context_window: 1100000
@@ -82,9 +130,11 @@ models:
     sources:
       deepswe: 0.696
       terminal_bench_v2_1: 0.874
+      terminal_bench_2: 0.215
       aa_intelligence_index: 55
-      arena_elo: 1480
-    notes: "DeepSWE gpt-5.6-terra[max]; strong cost/perf among closed models"
+      arena_elo: 1465.848
+      arena_coding_elo: 1515.563
+    notes: "DeepSWE max; official TB 2.0 Codex/max diagnostic; AA/TB v2.1 retained from 2026-07"
 
   openai/gpt-5.6-luna:
     context_window: 1100000
@@ -95,10 +145,13 @@ models:
     p50_latency_ms: 700
     sources:
       deepswe: 0.672
+      swe_rebench_resolved: 0.436
       terminal_bench_v2_1: 0.847
+      terminal_bench_2: 0.173
       aa_intelligence_index: 50
-      arena_elo: 1465
-    notes: "DeepSWE gpt-5.6-luna[max]; cheaper OpenAI tier"
+      arena_elo: 1452.448
+      arena_coding_elo: 1500.995
+    notes: "DeepSWE max; SWE-rebench medium; official TB 2.0 Codex/max diagnostic; AA/TB v2.1 retained from 2026-07"
 
   # --- Strong open-weight / low-cost (primary routing targets) ---
   moonshot/kimi-k3:
@@ -112,8 +165,9 @@ models:
       deepswe: 0.685
       terminal_bench_v2_1: 0.883
       aa_intelligence_index: 57
-      arena_elo: 1486
-    notes: "Together moonshotai/Kimi-K3 $2.70/$0.27/$13.50; DeepSWE 68.5% (~tie Fable); AA 57"
+      arena_elo: 1488.077
+      arena_coding_elo: 1539.563
+    notes: "Together moonshotai/Kimi-K3 $2.70/$0.27/$13.50; DeepSWE max; no exact current TB 2.0 or SWE-rebench row; AA/TB v2.1 retained from 2026-07"
 
   zai/glm-5.2:
     context_window: 1000000
@@ -124,10 +178,12 @@ models:
     p50_latency_ms: 500
     sources:
       deepswe: 0.438
+      swe_rebench_resolved: 0.570
       terminal_bench_v2_1: 0.827
       aa_intelligence_index: 51
-      arena_elo: 1471
-    notes: "Together zai-org/GLM-5.2 $1.40/$0.26/$4.40; DeepSWE 43.8% (below coding floor); strong TB"
+      arena_elo: 1475.239
+      arena_coding_elo: 1512.373
+    notes: "Together zai-org/GLM-5.2 $1.40/$0.26/$4.40; DeepSWE max; SWE-rebench high; no exact current TB 2.0 row; AA/TB v2.1 retained from 2026-07"
 
   deepseek/deepseek-v4-pro:
     context_window: 1048576
@@ -137,10 +193,12 @@ models:
     supports_prompt_caching: false
     p50_latency_ms: 800
     sources:
-      swe_bench_verified: 0.806
+      deepswe: 0.628
+      swe_rebench_resolved: 0.414
       terminal_bench_v2_1: 0.65
       aa_intelligence_index: 44
-      arena_elo: 1462
+      arena_elo: 1457.828
+      arena_coding_elo: 1500.484
     accuracy:
       code_generation: 0.75
       code_review_debug: 0.8333
@@ -150,7 +208,7 @@ models:
       reasoning_math: 1.0
       summarization: 1.0
       tool_use_agent: 1.0
-    notes: "Together DeepSeek-V4-Pro-0813 $1.32/$0.13/$3.96; live 50-scenario validation 20261011T014553Z (43/50 quality pass)"
+    notes: "Together DeepSeek-V4-Pro-0813 $1.32/$0.13/$3.96; live 50-scenario validation 20261011T014553Z (43/50 quality pass); public DeepSWE/SWE-rebench/Arena refreshed; unverifiable SWE-bench row removed"
 
   minimax/minimax-m3:
     context_window: 524288
@@ -160,9 +218,11 @@ models:
     supports_prompt_caching: false
     p50_latency_ms: 600
     sources:
+      swe_rebench_resolved: 0.464
       terminal_bench_v2_1: 0.66
       aa_intelligence_index: 44
-      arena_elo: 1450
+      arena_elo: 1440.460
+      arena_coding_elo: 1494.596
     accuracy:
       code_generation: 0.875
       code_review_debug: 1.0
@@ -172,7 +232,7 @@ models:
       reasoning_math: 1.0
       summarization: 1.0
       tool_use_agent: 1.0
-    notes: "Together MiniMaxAI/MiniMax-M3 $0.30/$0.06/$1.20; live 50-scenario validation 20261011T014959Z (47/50 quality pass)"
+    notes: "Together MiniMaxAI/MiniMax-M3 $0.30/$0.06/$1.20; live 50-scenario validation 20261011T014959Z (47/50 quality pass); SWE-rebench/Arena refreshed"
 
   meta-llama/llama-4-maverick:
     context_window: 1000000
@@ -181,10 +241,11 @@ models:
     supports_prompt_caching: false
     p50_latency_ms: 400
     sources:
-      swe_bench_verified: 0.21
+      swe_bench_verified: 0.210
       aa_intelligence_index: 14
-      arena_elo: 1380
-    notes: "AA Index 14; conservative SWE 21% (harness-sensitive — some tables much higher)"
+      arena_elo: 1326.968
+      arena_coding_elo: 1372.536
+    notes: "SWE-bench Verified 21.0% with mini-SWE-agent; AA retained from 2026-07"
 
   meta-llama/llama-4-scout:
     context_window: 10000000
@@ -195,8 +256,9 @@ models:
     sources:
       swe_bench_verified: 0.091
       aa_intelligence_index: 10
-      arena_elo: 1340
-    notes: "Cheapest long-context open option; weak coding/agent scores"
+      arena_elo: 1321.524
+      arena_coding_elo: 1362.754
+    notes: "SWE-bench Verified 9.1% with mini-SWE-agent; AA retained from 2026-07"
 
   meta-llama/llama-3.3-70b-instruct:
     context_window: 128000
@@ -206,8 +268,9 @@ models:
     p50_latency_ms: 200
     sources:
       aa_intelligence_index: 9
-      arena_elo: 1320
-    notes: "Legacy OSS via Groq/Together; AA Index ~9 — chat-only routing"
+      arena_elo: 1318.025
+      arena_coding_elo: 1345.724
+    notes: "AA value retained from 2026-07; current official LMArena overall and coding"
 
   # --- Legacy OpenAI (kept for comparison / passthrough demos) ---
   openai/gpt-4o:
@@ -218,10 +281,11 @@ models:
     supports_prompt_caching: true
     p50_latency_ms: 800
     sources:
-      swe_bench_verified: 0.388
+      swe_bench_verified: 0.216
       aa_intelligence_index: 35
-      arena_elo: 1395
-    notes: "Legacy; SWE-bench Verified ~38.8% (Mar 2025 class). Prefer gpt-5.6-* for frontier."
+      arena_elo: 1335.548
+      arena_coding_elo: 1359.754
+    notes: "SWE-bench Verified 21.6% with mini-SWE-agent (gpt-4o-2024-11-20); AA retained from 2026-07"
 
   openai/gpt-4o-mini:
     context_window: 128000
@@ -231,12 +295,12 @@ models:
     supports_prompt_caching: true
     p50_latency_ms: 450
     sources:
-      swe_bench_verified: 0.24
       aa_intelligence_index: 22
-      arena_elo: 1360
-    notes: "Legacy cheap OpenAI; weak vs 2026 coding/agent floors — useful for chat only"
+      arena_elo: 1317.599
+      arena_coding_elo: 1347.782
+    notes: "No exact current SWE-bench mini-agent row; AA retained from 2026-07; current official LMArena"
 
-  # --- Together.ai hosted (pricing from Together API 2026-10; scores seeded conservatively) ---
+  # --- Together.ai hosted (pricing from Together API 2026-10) ---
   together/deepseek-v4.1-flash:
     context_window: 1048576
     input_cost_per_m: 0.30
@@ -249,7 +313,7 @@ models:
       terminal_bench_v2_1: 0.70
       aa_intelligence_index: 42
       arena_elo: 1450
-    notes: "Together deepseek-ai/DeepSeek-V4.1-Flash; DeepSWE/TB seeded pending harness refresh"
+    notes: "Together deepseek-ai/DeepSeek-V4.1-Flash; DeepSWE/TB/Arena remain seeded — no exact public leaderboard row"
 
   together/deepseek-v4-pro:
     context_window: 1048576
@@ -258,11 +322,13 @@ models:
     supports_prompt_caching: false
     p50_latency_ms: 900
     sources:
-      deepswe: 0.65
+      deepswe: 0.628
+      swe_rebench_resolved: 0.414
       terminal_bench_v2_1: 0.72
       aa_intelligence_index: 45
-      arena_elo: 1460
-    notes: "Together DeepSeek-V4-Pro-0813"
+      arena_elo: 1457.828
+      arena_coding_elo: 1500.484
+    notes: "Together DeepSeek-V4-Pro-0813; mapped to the same public DeepSeek-V4 Pro rows as deepseek/deepseek-v4-pro; TB v2.1/AA retained"
 
   together/glm-5.3-flash:
     context_window: 1048575
@@ -275,4 +341,4 @@ models:
       terminal_bench_v2_1: 0.75
       aa_intelligence_index: 48
       arena_elo: 1455
-    notes: "Together zai-org/GLM-5.3-Flash (serverless)"
+    notes: "Together zai-org/GLM-5.3-Flash (serverless); scores remain seeded — not the same model as GLM-5.2"
