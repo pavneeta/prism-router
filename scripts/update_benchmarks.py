@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Best-effort refresh of config/benchmarks.yaml from public leaderboards.
+"""Monthly refresh of catalog scores and latest public model IDs.
 
-No provider API keys required. Partial updates are OK: unavailable sources are
-skipped with clear logs; snapshot_date is still bumped when the run succeeds.
+No provider API keys required. Source failures never abort the run: skipped
+sources are summarized, snapshot_date is always bumped, and new catalog aliases
+are added as passthrough rows when public IDs are discovered. DeepSWE/SWE
+numbers are never invented.
 
 Usage:
   python scripts/update_benchmarks.py
@@ -34,6 +36,7 @@ except ImportError:  # pragma: no cover
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BENCHMARKS = ROOT / "config" / "benchmarks.yaml"
+DEFAULT_MODELS = ROOT / "config" / "models.yaml"
 USER_AGENT = "prism-router-benchmark-updater/0.1 (+https://github.com/pavneeta/prism-router)"
 HTTP_TIMEOUT_S = 60
 
@@ -42,6 +45,11 @@ ARENA_DATASET_URL = "https://datasets-server.huggingface.co/rows"
 ARENA_DATASET = "lmarena-ai/leaderboard-dataset"
 TERMINAL_BENCH_URL = "https://www.tbench.ai/leaderboard/terminal-bench/2.0"
 SWE_REBENCH_URL = "https://swe-rebench.com/"
+TOGETHER_DOCS_URL = "https://docs.together.ai/docs/serverless/models"
+FIREWORKS_DOCS_URLS = [
+    "https://docs.fireworks.ai/nexus/open-models",
+    "https://docs.fireworks.ai/getting-started/models",
+]
 
 # Catalog model id → DeepSWE leaderboard model slug(s), preferred first.
 DEEPSWE_ALIASES: dict[str, list[str]] = {
@@ -53,6 +61,9 @@ DEEPSWE_ALIASES: dict[str, list[str]] = {
     "anthropic/claude-sonnet-5": ["claude-sonnet-5"],
     "moonshot/kimi-k3": ["kimi-k3"],
     "zai/glm-5.2": ["glm-5-2", "glm-5.2"],
+    "zai/glm-5.3": ["glm-5-3", "glm-5.3"],
+    "together/glm-5.3-flash": ["glm-5-3-flash", "glm-5.3-flash"],
+    "together/deepseek-v4.1-flash": ["deepseek-v4-1-flash", "deepseek-v4.1-flash"],
     "deepseek/deepseek-v4-pro": ["deepseek-v4-pro"],
     "together/deepseek-v4-pro": ["deepseek-v4-pro"],
 }
@@ -78,6 +89,9 @@ ARENA_ALIASES: dict[str, list[str]] = {
     "anthropic/claude-sonnet-5": ["claude-sonnet-5-high"],
     "moonshot/kimi-k3": ["kimi-k3-max"],
     "zai/glm-5.2": ["glm-5.2-max"],
+    "zai/glm-5.3": ["glm-5.3-max", "glm-5.3"],
+    "together/glm-5.3-flash": ["glm-5.3-flash"],
+    "together/deepseek-v4.1-flash": ["deepseek-v4.1-flash"],
     "deepseek/deepseek-v4-pro": ["deepseek-v4-pro"],
     "together/deepseek-v4-pro": ["deepseek-v4-pro"],
     "minimax/minimax-m3": ["minimax-m3"],
@@ -110,6 +124,7 @@ SWE_REBENCH_ALIASES: dict[str, list[str]] = {
     "GPT-5.6 Sol [medium]": ["openai/gpt-5.6-sol"],
     "GPT-5.6 Luna [medium]": ["openai/gpt-5.6-luna"],
     "GLM-5.2 [high]": ["zai/glm-5.2"],
+    "GLM-5.3 [high]": ["zai/glm-5.3"],
     "DeepSeek-V4 Pro [high]": ["deepseek/deepseek-v4-pro", "together/deepseek-v4-pro"],
     "MiniMax M3": ["minimax/minimax-m3"],
 }
@@ -130,6 +145,75 @@ class Change:
     source_key: str
     old: Any
     new: Any
+
+
+@dataclass(frozen=True)
+class CatalogAlias:
+    """Curated public-ID → catalog mapping. Never invent benchmark scores."""
+
+    catalog_id: str
+    litellm_model: str
+    together_ids: tuple[str, ...] = ()
+    deepswe_slugs: tuple[str, ...] = ()
+    arena_names: tuple[str, ...] = ()
+    fireworks_ids: tuple[str, ...] = ()
+    context_window: int = 128000
+    input_cost_per_m: float = 0.0
+    output_cost_per_m: float = 0.0
+    cached_input_cost_per_m: float | None = None
+    notes: str = "pending public scores; passthrough only"
+
+
+# Only families we already route. New Together/Fireworks/leaderboard IDs are
+# added when they match one of these aliases — never every public model.
+CATALOG_ALIASES: tuple[CatalogAlias, ...] = (
+    CatalogAlias(
+        catalog_id="zai/glm-5.3",
+        litellm_model="together_ai/zai-org/GLM-5.3",
+        together_ids=("zai-org/GLM-5.3",),
+        deepswe_slugs=("glm-5-3", "glm-5.3"),
+        arena_names=("glm-5.3-max", "glm-5.3"),
+        fireworks_ids=("glm-5p3",),
+        context_window=1048575,
+        input_cost_per_m=1.40,
+        output_cost_per_m=4.40,
+        cached_input_cost_per_m=0.26,
+        notes="Together zai-org/GLM-5.3; pending public scores; passthrough only",
+    ),
+    CatalogAlias(
+        catalog_id="together/glm-5.3-flash",
+        litellm_model="together_ai/zai-org/GLM-5.3-Flash",
+        together_ids=("zai-org/GLM-5.3-Flash",),
+        deepswe_slugs=("glm-5-3-flash", "glm-5.3-flash"),
+        arena_names=("glm-5.3-flash",),
+        fireworks_ids=("glm-5p3-flash",),
+        context_window=1048575,
+        input_cost_per_m=0.15,
+        output_cost_per_m=0.50,
+        cached_input_cost_per_m=0.03,
+        notes="Together zai-org/GLM-5.3-Flash; pending public scores; passthrough only",
+    ),
+    CatalogAlias(
+        catalog_id="together/deepseek-v4.1-flash",
+        litellm_model="together_ai/deepseek-ai/DeepSeek-V4.1-Flash",
+        together_ids=("deepseek-ai/DeepSeek-V4.1-Flash",),
+        deepswe_slugs=("deepseek-v4-1-flash", "deepseek-v4.1-flash"),
+        arena_names=("deepseek-v4.1-flash",),
+        fireworks_ids=("deepseek-v4p1-flash",),
+        context_window=1000000,
+        input_cost_per_m=0.30,
+        output_cost_per_m=1.20,
+        cached_input_cost_per_m=0.006,
+        notes="Together deepseek-ai/DeepSeek-V4.1-Flash; pending public scores; passthrough only",
+    ),
+    CatalogAlias(
+        catalog_id="fireworks/glm-5.3",
+        litellm_model="fireworks_ai/accounts/fireworks/models/glm-5p3",
+        fireworks_ids=("glm-5p3",),
+        context_window=1048575,
+        notes="Fireworks glm-5p3; pending public scores; passthrough only",
+    ),
+)
 
 
 def _http_get_json(url: str) -> Any:
@@ -153,6 +237,195 @@ def _http_get_text(url: str, headers: dict[str, str] | None = None) -> str:
 
 def _round_rate(value: float, digits: int = 3) -> float:
     return round(float(value), digits)
+
+
+_TOGETHER_ID_RE = re.compile(
+    r"\b((?:zai-org|deepseek-ai|moonshotai|MiniMaxAI)/[A-Za-z0-9._-]+)\b"
+)
+_TOGETHER_TABLE_ROW = re.compile(
+    r"\|\s*[^|\n]+\s*\|\s*[^|\n]+\s*\|\s*"
+    r"((?:zai-org|deepseek-ai|moonshotai|MiniMaxAI)/[A-Za-z0-9._-]+)\s*\|\s*"
+    r"([0-9-]+)\s*\|\s*\$?([0-9.]+|Free|-)\s*\|\s*\$?([0-9.]+|-)\s*\|\s*"
+    r"\$?([0-9.]+|Free|-)",
+    re.IGNORECASE,
+)
+_FIREWORKS_MODEL_RE = re.compile(
+    r"(?:accounts/fireworks/(?:models|routers)/)?((?:glm|kimi|deepseek|minimax)[-][A-Za-z0-9p.-]+)",
+    re.IGNORECASE,
+)
+
+
+def _parse_money(raw: str) -> float | None:
+    text = (raw or "").strip().replace("$", "")
+    if not text or text in {"-", "—"}:
+        return None
+    if text.lower() == "free":
+        return 0.0
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def parse_together_public_models(text: str) -> dict[str, dict[str, Any]]:
+    """Parse Together serverless docs (markdown table or raw IDs). No API key."""
+    models: dict[str, dict[str, Any]] = {}
+    for match in _TOGETHER_TABLE_ROW.finditer(text):
+        model_id, context, inp, cached, out = match.groups()
+        entry: dict[str, Any] = {}
+        if context.isdigit():
+            entry["context_window"] = int(context)
+        inp_v = _parse_money(inp)
+        cached_v = _parse_money(cached)
+        out_v = _parse_money(out)
+        if inp_v is not None:
+            entry["input_cost_per_m"] = inp_v
+        if cached_v is not None:
+            entry["cached_input_cost_per_m"] = cached_v
+        if out_v is not None:
+            entry["output_cost_per_m"] = out_v
+        models[model_id] = entry
+    for model_id in _TOGETHER_ID_RE.findall(text):
+        models.setdefault(model_id, {})
+    return models
+
+
+def parse_fireworks_public_ids(text: str) -> list[str]:
+    """Parse optional Fireworks public docs for pinned serverless IDs."""
+    found = {match.group(1).lower() for match in _FIREWORKS_MODEL_RE.finditer(text)}
+    return sorted(found)
+
+
+def extract_deepswe_ids(payload: Any) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    ids: set[str] = set()
+    for row in payload.get("rows") or []:
+        if isinstance(row, dict) and row.get("model"):
+            ids.add(str(row["model"]).strip())
+    return sorted(ids)
+
+
+def extract_arena_ids(payload: Any) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    ids: set[str] = set()
+    for item in payload.get("rows") or []:
+        row = item.get("row") if isinstance(item, dict) else None
+        if isinstance(row, dict) and row.get("model_name"):
+            ids.add(str(row["model_name"]).strip())
+        elif isinstance(item, dict) and item.get("model_name"):
+            ids.add(str(item["model_name"]).strip())
+    return sorted(ids)
+
+
+def map_discovered_models(
+    *,
+    existing_ids: set[str],
+    together_ids: list[str] | set[str],
+    deepswe_ids: list[str] | set[str],
+    arena_ids: list[str] | set[str],
+    fireworks_ids: list[str] | set[str],
+    public_scores: dict[str, dict[str, float]] | None = None,
+) -> list[dict[str, Any]]:
+    """Map discovered public IDs onto curated catalog aliases.
+
+    Unknown IDs are ignored. Scores are attached only when ``public_scores``
+    already has a real value — this never invents DeepSWE/SWE numbers.
+    """
+    together_l = {str(x).strip() for x in together_ids}
+    together_lower = {x.lower() for x in together_l}
+    deepswe_l = {str(x).strip().lower() for x in deepswe_ids}
+    arena_l = {str(x).strip().lower() for x in arena_ids}
+    fireworks_l = {str(x).strip().lower() for x in fireworks_ids}
+    scores = public_scores or {}
+    proposals: list[dict[str, Any]] = []
+    for alias in CATALOG_ALIASES:
+        if alias.catalog_id in existing_ids:
+            continue
+        hit = any(tid in together_l or tid.lower() in together_lower for tid in alias.together_ids)
+        hit = hit or any(slug.lower() in deepswe_l for slug in alias.deepswe_slugs)
+        hit = hit or any(name.lower() in arena_l for name in alias.arena_names)
+        hit = hit or any(fid.lower() in fireworks_l for fid in alias.fireworks_ids)
+        if not hit:
+            continue
+        real_scores = {
+            source: value
+            for source, value in (scores.get(alias.catalog_id) or {}).items()
+            if value is not None
+        }
+        proposals.append(
+            {
+                "catalog_id": alias.catalog_id,
+                "litellm_model": alias.litellm_model,
+                "auto_select": False,
+                "context_window": alias.context_window,
+                "input_cost_per_m": alias.input_cost_per_m,
+                "output_cost_per_m": alias.output_cost_per_m,
+                "cached_input_cost_per_m": alias.cached_input_cost_per_m,
+                "sources": real_scores,
+                "notes": (
+                    alias.notes
+                    if real_scores
+                    else alias.notes
+                    if "pending" in alias.notes
+                    else f"{alias.notes}; pending public scores"
+                ),
+                "alias": alias,
+            }
+        )
+    return proposals
+
+
+def fetch_together_public_models() -> SourceResult:
+    """Public Together docs catalog — no API key."""
+    try:
+        text = _http_get_text(TOGETHER_DOCS_URL)
+        models = parse_together_public_models(text)
+        if not models:
+            raise ValueError("no Together model IDs parsed")
+        return SourceResult(
+            "together_public",
+            True,
+            f"parsed {len(models)} Together docs IDs from {TOGETHER_DOCS_URL}",
+            meta={"url": TOGETHER_DOCS_URL, "ids": sorted(models), "models": models},
+        )
+    except Exception as exc:  # noqa: BLE001
+        return SourceResult(
+            "together_public",
+            False,
+            f"skip: Together public docs unavailable ({exc})",
+            meta={"url": TOGETHER_DOCS_URL},
+        )
+
+
+def fetch_fireworks_public_models() -> SourceResult:
+    """Optional Fireworks public docs — skipped if the page needs a key or is down."""
+    last_err = "no URL attempted"
+    combined: set[str] = set()
+    used_url = ""
+    for url in FIREWORKS_DOCS_URLS:
+        try:
+            text = _http_get_text(url)
+            ids = parse_fireworks_public_ids(text)
+            if ids:
+                combined.update(ids)
+                used_url = used_url or url
+        except Exception as exc:  # noqa: BLE001
+            last_err = f"{url}: {exc}"
+            logger.info("Fireworks public list skipped: %s", last_err)
+    if not combined:
+        return SourceResult(
+            "fireworks_public",
+            False,
+            f"skip: Fireworks public docs unavailable ({last_err})",
+        )
+    return SourceResult(
+        "fireworks_public",
+        True,
+        f"parsed {len(combined)} Fireworks public IDs from {used_url}",
+        meta={"url": used_url, "ids": sorted(combined)},
+    )
 
 
 def _discover_deepswe_urls() -> list[str]:
@@ -251,7 +524,12 @@ def fetch_deepswe() -> SourceResult:
         ok=bool(scores),
         message=f"ok from {used_url}" + (f" generated_at={generated}" if generated else ""),
         scores=scores,
-        meta={"url": used_url, "generated_at": generated, "n_rows": len(rows)},
+        meta={
+            "url": used_url,
+            "generated_at": generated,
+            "n_rows": len(rows),
+            "discovered_ids": sorted(by_slug),
+        },
     )
 
 
@@ -290,6 +568,7 @@ def _parse_aa_payload(payload: Any) -> dict[str, float]:
         "gpt-5.6-sol": "openai/gpt-5.6-sol",
         "kimi-k3": "moonshot/kimi-k3",
         "glm-5.2": "zai/glm-5.2",
+        "glm-5.3": "zai/glm-5.3",
         "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
     }
     if isinstance(payload, dict):
@@ -388,12 +667,18 @@ def fetch_arena(category: str, source_key: str) -> SourceResult:
         if not scores:
             return SourceResult(source_key, False, f"skip: no exact catalog matches in Arena {category}")
         snapshot = max((d for d in snapshot_dates if d), default="")
+        discovered = extract_arena_ids({"rows": collected})
         return SourceResult(
             source_key,
             True,
             f"official LMArena {category} snapshot {snapshot} from {ARENA_DATASET_URL}",
             scores=scores,
-            meta={"url": ARENA_DATASET_URL, "snapshot_date": snapshot, "category": category},
+            meta={
+                "url": ARENA_DATASET_URL,
+                "snapshot_date": snapshot,
+                "category": category,
+                "discovered_ids": discovered,
+            },
         )
     except Exception as exc:  # noqa: BLE001
         return SourceResult(source_key, False, f"skip: LMArena {category} unavailable ({exc})")
@@ -650,14 +935,92 @@ def insert_source_value(text: str, model_id: str, source_key: str, new_value: An
     end = start + next_model.start() + 1 if next_model else len(text)
     block = text[start:end]
     sources = re.search(r"^([ \t]*)sources:\s*\n", block, re.MULTILINE)
-    if not sources:
-        logger.warning("sources block missing under %s; skip insert %s", model_id, source_key)
+    if sources:
+        indent = sources.group(1) + "  "
+        insertion = f"{indent}{source_key}: {_format_source_value(new_value)}\n"
+        insert_at = sources.end()
+        new_block = block[:insert_at] + insertion + block[insert_at:]
+        return text[:start] + new_block + text[end:], True
+    inline = re.search(r"^([ \t]*)sources:\s*\{\s*\}\s*$", block, re.MULTILINE)
+    if inline:
+        indent = inline.group(1) + "  "
+        insertion = (
+            f"{inline.group(1)}sources:\n"
+            f"{indent}{source_key}: {_format_source_value(new_value)}"
+        )
+        new_block = block[: inline.start()] + insertion + block[inline.end() :]
+        return text[:start] + new_block + text[end:], True
+    logger.warning("sources block missing under %s; skip insert %s", model_id, source_key)
+    return text, False
+
+
+def append_deployment(text: str, catalog_id: str, litellm_model: str) -> tuple[str, bool]:
+    """Append a passthrough deployment if the catalog id is not already listed."""
+    if re.search(rf"^  - id: {re.escape(catalog_id)}\s*$", text, re.MULTILINE):
         return text, False
-    indent = sources.group(1) + "  "
-    insertion = f"{indent}{source_key}: {_format_source_value(new_value)}\n"
-    insert_at = sources.end()
-    new_block = block[:insert_at] + insertion + block[insert_at:]
-    return text[:start] + new_block + text[end:], True
+    block = (
+        f"\n  - id: {catalog_id}\n"
+        f"    litellm_model: {litellm_model}\n"
+        f"    enabled: true\n"
+        f"    auto_select: false\n"
+    )
+    if not text.endswith("\n"):
+        text += "\n"
+    return text + block, True
+
+
+def append_benchmark_model(
+    text: str,
+    catalog_id: str,
+    *,
+    context_window: int,
+    input_cost_per_m: float,
+    output_cost_per_m: float,
+    cached_input_cost_per_m: float | None,
+    sources: dict[str, float],
+    notes: str,
+) -> tuple[str, bool]:
+    """Append a catalog row. ``sources`` must be real public scores or empty."""
+    if re.search(rf"^  {re.escape(catalog_id)}:", text, re.MULTILINE):
+        return text, False
+    lines = [
+        f"  {catalog_id}:",
+        f"    context_window: {int(context_window)}",
+        f"    input_cost_per_m: {float(input_cost_per_m):.2f}",
+        f"    output_cost_per_m: {float(output_cost_per_m):.2f}",
+    ]
+    if cached_input_cost_per_m is not None:
+        lines.append(f"    cached_input_cost_per_m: {float(cached_input_cost_per_m):.3f}")
+    lines.extend(
+        [
+            "    supports_prompt_caching: false",
+            "    p50_latency_ms: 500",
+        ]
+    )
+    if sources:
+        lines.append("    sources:")
+        for key, value in sorted(sources.items()):
+            lines.append(f"      {key}: {_format_source_value(value)}")
+    else:
+        lines.append("    sources: {}")
+    safe_notes = notes.replace('"', "'")
+    lines.append(f'    notes: "{safe_notes}"')
+    block = "\n".join(lines) + "\n"
+    if not text.endswith("\n"):
+        text += "\n"
+    return text + "\n" + block, True
+
+
+def upsert_last_refresh(text: str, payload: dict[str, Any]) -> tuple[str, bool]:
+    """Insert or replace the top-level last_refresh block (always rewritten)."""
+    dumped = yaml.safe_dump({"last_refresh": payload}, sort_keys=False).rstrip() + "\n"
+    pat = re.compile(r"^last_refresh:\n(?:[ \t]+.+\n)*", re.MULTILINE)
+    if pat.search(text):
+        return pat.sub(dumped, text, count=1), True
+    snap = re.search(r"^snapshot_date:.*\n", text, re.MULTILINE)
+    if snap:
+        return text[: snap.end()] + dumped + text[snap.end() :], True
+    return text + "\n" + dumped, True
 
 
 def update_snapshot_date(text: str, snapshot: str) -> tuple[str, bool]:
@@ -713,7 +1076,9 @@ def apply_updates(
         changes.append(Change("_meta", "snapshot_date", prev_snap, snapshot))
         notes.append(f"- **snapshot_date**: `{prev_snap}` → `{snapshot}`")
     else:
-        notes.append(f"- **snapshot_date**: already `{snapshot}`")
+        # Same calendar day as a previous attempt — still record the bump intent
+        # so operators can see the monthly job ran.
+        notes.append(f"- **snapshot_date**: already `{snapshot}` (refresh still recorded)")
 
     return text, changes, notes
 
@@ -746,9 +1111,69 @@ def build_summary(
             lines.append(f"- `{c.model_id}` `{c.source_key}`: {c.old} → {c.new}")
     lines.append("")
     ok_count = sum(1 for r in results if r.ok)
+    skipped = [r for r in results if not r.ok]
     lines.append(f"Fetched successfully: **{ok_count}/{len(results)}** sources.")
+    if skipped:
+        lines.append("")
+        lines.append("## Skipped sources")
+        lines.append("")
+        for result in skipped:
+            lines.append(f"- `{result.name}`: {result.message}")
+    lines.append("")
+    lines.append(
+        "Auto routing uses these YAML floors/scores on the next deploy after this "
+        "PR is merged. New models without public scores stay `auto_select: false`."
+    )
     lines.append("")
     return "\n".join(lines) + "\n"
+
+
+def _collect_public_scores(results: list[SourceResult]) -> dict[str, dict[str, float]]:
+    out: dict[str, dict[str, float]] = {}
+    for result in results:
+        if not result.ok:
+            continue
+        for model_id, value in result.scores.items():
+            out.setdefault(model_id, {})[result.name] = value
+    return out
+
+
+def apply_discoveries(
+    benchmarks_text: str,
+    models_text: str,
+    proposals: list[dict[str, Any]],
+) -> tuple[str, str, list[Change], list[str]]:
+    changes: list[Change] = []
+    notes: list[str] = []
+    for proposal in proposals:
+        catalog_id = str(proposal["catalog_id"])
+        sources = dict(proposal.get("sources") or {})
+        benchmarks_text, added_b = append_benchmark_model(
+            benchmarks_text,
+            catalog_id,
+            context_window=int(proposal.get("context_window") or 128000),
+            input_cost_per_m=float(proposal.get("input_cost_per_m") or 0.0),
+            output_cost_per_m=float(proposal.get("output_cost_per_m") or 0.0),
+            cached_input_cost_per_m=proposal.get("cached_input_cost_per_m"),
+            sources=sources,
+            notes=str(proposal.get("notes") or "pending public scores; passthrough only"),
+        )
+        models_text, added_m = append_deployment(
+            models_text,
+            catalog_id,
+            str(proposal["litellm_model"]),
+        )
+        if added_b or added_m:
+            changes.append(Change(catalog_id, "catalog", None, proposal["litellm_model"]))
+            if sources:
+                notes.append(
+                    f"  - added `{catalog_id}` with public scores {sorted(sources)}"
+                )
+            else:
+                notes.append(
+                    f"  - added `{catalog_id}` as `auto_select: false` (pending scores)"
+                )
+    return benchmarks_text, models_text, changes, notes
 
 
 def run(
@@ -756,25 +1181,124 @@ def run(
     *,
     dry_run: bool,
     summary_path: Path | None,
+    models_path: Path | None = None,
 ) -> int:
     if not benchmarks_path.is_file():
         logger.error("benchmarks file not found: %s", benchmarks_path)
         return 1
 
-    original = benchmarks_path.read_text(encoding="utf-8")
+    models_path = models_path or DEFAULT_MODELS
+    original_b = benchmarks_path.read_text(encoding="utf-8")
+    original_m = models_path.read_text(encoding="utf-8") if models_path.is_file() else ""
     snapshot = date.today().isoformat()
+    attempted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    results: list[SourceResult] = []
+    updated_b = original_b
+    updated_m = original_m
+    changes: list[Change] = []
+    notes: list[str] = []
+    added_ids: list[str] = []
 
-    results = [
-        fetch_deepswe(),
-        fetch_swe_bench_verified(),
-        fetch_swe_rebench(),
-        fetch_terminal_bench(),
-        fetch_aa_intelligence_index(),
-        fetch_arena_elo(),
-        fetch_arena_coding_elo(),
-    ]
+    try:
+        results = [
+            fetch_deepswe(),
+            fetch_swe_bench_verified(),
+            fetch_swe_rebench(),
+            fetch_terminal_bench(),
+            fetch_aa_intelligence_index(),
+            fetch_arena_elo(),
+            fetch_arena_coding_elo(),
+            fetch_together_public_models(),
+            fetch_fireworks_public_models(),
+        ]
+    except Exception as exc:  # noqa: BLE001 — still write snapshot + skip summary
+        logger.exception("refresh failed before all sources completed")
+        results.append(SourceResult("refresh", False, f"skip: unexpected error ({exc})"))
 
-    updated, changes, notes = apply_updates(original, results, snapshot)
+    try:
+        score_results = [r for r in results if r.scores]
+        updated_b, changes, notes = apply_updates(original_b, results, snapshot)
+
+        existing: set[str] = set()
+        parsed_b = yaml.safe_load(original_b) or {}
+        if isinstance(parsed_b, dict):
+            existing.update((parsed_b.get("models") or {}))
+        parsed_m = yaml.safe_load(original_m) or {}
+        if isinstance(parsed_m, dict):
+            existing.update(
+                str(row.get("id"))
+                for row in (parsed_m.get("deployments") or [])
+                if isinstance(row, dict) and row.get("id")
+            )
+
+        together_ids: list[str] = []
+        fireworks_ids: list[str] = []
+        deepswe_ids: list[str] = []
+        arena_ids: list[str] = []
+        for result in results:
+            ids = result.meta.get("ids") or result.meta.get("discovered_ids") or []
+            if result.name == "together_public":
+                together_ids = list(ids)
+            elif result.name == "fireworks_public":
+                fireworks_ids = list(ids)
+            elif result.name == "deepswe":
+                deepswe_ids = list(ids)
+            elif result.name in {"arena_elo", "arena_coding_elo"}:
+                arena_ids.extend(list(ids))
+
+        proposals = map_discovered_models(
+            existing_ids=existing,
+            together_ids=together_ids,
+            deepswe_ids=deepswe_ids,
+            arena_ids=arena_ids,
+            fireworks_ids=fireworks_ids,
+            public_scores=_collect_public_scores(score_results),
+        )
+        if proposals:
+            updated_b, updated_m, disc_changes, disc_notes = apply_discoveries(
+                updated_b, updated_m, proposals
+            )
+            changes.extend(disc_changes)
+            notes.append("- **model discovery**: mapped curated catalog aliases")
+            notes.extend(disc_notes)
+            added_ids = [str(p["catalog_id"]) for p in proposals]
+        else:
+            notes.append("- **model discovery**: no new curated aliases")
+
+        skipped = {r.name: r.message for r in results if not r.ok}
+        last_refresh = {
+            "attempted_at": attempted_at,
+            "snapshot_date": snapshot,
+            "sources_ok": [r.name for r in results if r.ok],
+            "sources_skipped": skipped,
+            "models_added": added_ids,
+            "models_pending_scores": [
+                str(p["catalog_id"]) for p in proposals if not p.get("sources")
+            ],
+        }
+        updated_b, _ = upsert_last_refresh(updated_b, last_refresh)
+        notes.append(f"- **last_refresh.attempted_at**: `{attempted_at}`")
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("apply/discover failed; writing snapshot + skip summary anyway")
+        notes.append(f"- **refresh**: skipped — unexpected error ({exc})")
+        try:
+            updated_b, more_changes, more_notes = apply_updates(original_b, results, snapshot)
+            changes.extend(more_changes)
+            notes.extend(more_notes)
+        except Exception as inner:  # noqa: BLE001
+            notes.append(f"- **apply_updates**: failed ({inner})")
+            updated_b, _ = update_snapshot_date(original_b, snapshot)
+        updated_b, _ = upsert_last_refresh(
+            updated_b,
+            {
+                "attempted_at": attempted_at,
+                "snapshot_date": snapshot,
+                "sources_ok": [r.name for r in results if r.ok],
+                "sources_skipped": {r.name: r.message for r in results if not r.ok},
+                "error": str(exc),
+            },
+        )
+
     summary = build_summary(results, changes, notes, snapshot, dry_run)
     print(summary, end="")
 
@@ -783,16 +1307,20 @@ def run(
         summary_path.write_text(summary, encoding="utf-8")
         logger.info("wrote summary %s", summary_path)
 
-    if updated == original:
+    wrote_any = updated_b != original_b or updated_m != original_m
+    if not wrote_any:
         logger.info("no file changes")
         return 0
 
     if dry_run:
-        logger.info("dry-run: would write %d change(s) to %s", len(changes), benchmarks_path)
+        logger.info("dry-run: would write %d change(s)", len(changes))
         return 0
 
-    benchmarks_path.write_text(updated, encoding="utf-8")
+    benchmarks_path.write_text(updated_b, encoding="utf-8")
     logger.info("wrote %s (%d change(s))", benchmarks_path, len(changes))
+    if updated_m != original_m and models_path.is_file():
+        models_path.write_text(updated_m, encoding="utf-8")
+        logger.info("wrote %s", models_path)
     return 0
 
 
@@ -803,6 +1331,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=DEFAULT_BENCHMARKS,
         help="Path to benchmarks.yaml",
+    )
+    parser.add_argument(
+        "--models",
+        type=Path,
+        default=DEFAULT_MODELS,
+        help="Path to models.yaml",
     )
     parser.add_argument(
         "--dry-run",
@@ -826,7 +1360,12 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(levelname)s %(message)s",
     )
-    return run(args.benchmarks, dry_run=args.dry_run, summary_path=args.summary)
+    return run(
+        args.benchmarks,
+        dry_run=args.dry_run,
+        summary_path=args.summary,
+        models_path=args.models,
+    )
 
 
 if __name__ == "__main__":

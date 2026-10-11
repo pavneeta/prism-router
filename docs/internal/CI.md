@@ -18,8 +18,12 @@ Workflow: [`.github/workflows/update-benchmarks.yml`](../../.github/workflows/up
 What it does:
 
 1. Checks out the repo and installs Python 3.11 + PyYAML
-2. Runs [`scripts/update_benchmarks.py`](../../scripts/update_benchmarks.py) (public HTTP only — **no** Fireworks / OpenAI / Anthropic / AA API keys)
-3. If `config/benchmarks.yaml` changed, opens a PR titled `chore: monthly benchmark refresh (YYYY-MM)` via `peter-evans/create-pull-request` and `GITHUB_TOKEN`
+2. Runs parser unit tests, then [`scripts/update_benchmarks.py`](../../scripts/update_benchmarks.py) (public HTTP only — **no** Fireworks / OpenAI / Anthropic / AA API keys)
+3. Refreshes exact scores **and** discovers latest public model IDs (Together docs, DeepSWE/Arena slugs, optional Fireworks docs)
+4. Always bumps `snapshot_date`, writes `last_refresh` with a skip summary, and opens a PR titled `chore: monthly benchmark and model refresh (YYYY-MM)` via `peter-evans/create-pull-request` and `GITHUB_TOKEN` — even when every source failed
+5. New curated aliases without public scores are added to `config/models.yaml` + `config/benchmarks.yaml` as `auto_select: false` passthrough (`pending public scores`). DeepSWE/SWE numbers are never invented.
+
+Merge that PR so the next deploy picks up updated floors/scores for `auto`. `GET /ready` reports `benchmarks_snapshot_date`.
 
 **Repo setting required:** Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**. Without that, the scrape still runs and pushes a branch, but PR creation fails (open the PR manually from the branch).
 
@@ -37,13 +41,15 @@ python scripts/update_benchmarks.py --summary logs/benchmark_update_summary.md -
 
 | Source | Status |
 | --- | --- |
-| DeepSWE | Live JSON from `deepswe.datacurve.ai` |
-| Arena Elo | Community API (`api.wulong.dev`) + HF datasets-server mirror |
-| SWE-bench Verified | Best-effort public JSON mirrors (skip if unmapped) |
-| Terminal-Bench | Best-effort public JSON mirrors (skip if unmapped) |
-| AA Intelligence Index | Best-effort public endpoints (often auth-gated → skip) |
+| DeepSWE | Live JSON from `deepswe.datacurve.ai` + leaderboard ID discovery |
+| Arena Elo | Official HF datasets-server (`lmarena-ai/leaderboard-dataset`) + ID discovery |
+| SWE-bench Verified | Official mini-SWE-agent rows (skip if unmapped) |
+| Terminal-Bench | Official TB 2.0 leaderboard (skip if unmapped) |
+| Together public models | Serverless docs table (no API key) — used to discover latest IDs |
+| Fireworks public models | Optional public docs IDs (skip if the page is unavailable) |
+| AA Intelligence Index | Documented Data API requires `x-api-key` — skipped; no key used |
 
-Unavailable sources are skipped; partial updates and a bumped `snapshot_date` are OK. See [BENCHMARKS.md](../BENCHMARKS.md).
+Unavailable sources are skipped; the job still writes `last_refresh`, bumps `snapshot_date`, and opens a PR. See [BENCHMARKS.md](../BENCHMARKS.md).
 
 ## Docker release (GHCR)
 

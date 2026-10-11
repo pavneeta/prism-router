@@ -85,9 +85,26 @@ Re-pull leaderboards when:
 ### Automated monthly update
 
 GitHub Actions runs [`scripts/update_benchmarks.py`](../scripts/update_benchmarks.py)
-monthly (`0 6 1 * *` UTC) and on `workflow_dispatch`. It refreshes exact matches
-from DeepSWE, SWE-bench, SWE-rebench, Terminal-Bench, and LMArena, reports unavailable
-sources, and opens a PR. No provider API secrets are read or required.
+monthly (`0 6 1 * *` UTC) and on `workflow_dispatch`. Each run:
+
+1. Refreshes exact catalog matches from DeepSWE, SWE-bench, SWE-rebench,
+   Terminal-Bench, and LMArena
+2. Discovers latest public model IDs from Together serverless docs (no API key),
+   DeepSWE/Arena leaderboard slugs, and optional Fireworks public docs
+3. Maps new IDs onto curated aliases (for example `zai-org/GLM-5.3` → `zai/glm-5.3`).
+   Models with public scores get those scores; models without scores are added as
+   `auto_select: false` passthrough with notes `pending public scores`
+4. Always bumps `snapshot_date` and writes `last_refresh` (including skipped
+   sources), then opens a PR even when every source failed
+
+DeepSWE and SWE numbers are never invented. Operators merge the PR so the next
+deploy picks up updated floors/scores for `auto`. `GET /ready` exposes
+`benchmarks_snapshot_date`.
+
+No provider API secrets are read or required.
+
+**Repo setting required:** Settings → Actions → General → **Allow GitHub Actions
+to create and approve pull requests**.
 
 ```bash
 python scripts/update_benchmarks.py --dry-run -v

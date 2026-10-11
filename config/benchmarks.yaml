@@ -1,6 +1,13 @@
 # Public benchmark catalog (see docs/BENCHMARKS.md for provenance and caveats).
 schema_version: 1
 snapshot_date: "2026-10-11"
+last_refresh:
+  attempted_at: "2026-10-11T00:00:00Z"
+  snapshot_date: "2026-10-11"
+  sources_ok: []
+  sources_skipped: {}
+  models_added: []
+  models_pending_scores: []
 sources_docs: docs/BENCHMARKS.md
 
 # Raw source keys (optional per model):
@@ -184,6 +191,16 @@ models:
       arena_elo: 1475.239
       arena_coding_elo: 1512.373
     notes: "Together zai-org/GLM-5.2 $1.40/$0.26/$4.40; DeepSWE max; SWE-rebench high; no exact current TB 2.0 row; AA/TB v2.1 retained from 2026-07"
+
+  zai/glm-5.3:
+    context_window: 1048575
+    input_cost_per_m: 1.40
+    output_cost_per_m: 4.40
+    cached_input_cost_per_m: 0.26
+    supports_prompt_caching: false
+    p50_latency_ms: 500
+    sources: {}
+    notes: "Together zai-org/GLM-5.3; pending public scores; passthrough only"
 
   deepseek/deepseek-v4-pro:
     context_window: 1048576
