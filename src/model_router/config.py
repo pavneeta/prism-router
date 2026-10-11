@@ -141,6 +141,7 @@ class ModelBenchmark(BaseModel):
 class BenchmarksConfig(BaseModel):
     schema_version: int = 1
     snapshot_date: str | None = None
+    last_refresh: dict[str, Any] | None = None
     sources_docs: str | None = None
     source_snapshots: dict[str, Any] | None = None
     models: dict[str, ModelBenchmark]

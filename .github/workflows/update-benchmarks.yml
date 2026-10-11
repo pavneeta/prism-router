@@ -1,5 +1,7 @@
-# Monthly (and on-demand) refresh of config/benchmarks.yaml from public leaderboards.
+# Monthly (and on-demand) refresh of catalog scores + latest public model IDs.
 # No provider API secrets required for the scrape itself.
+# Source failures never skip the month: snapshot_date is bumped, skips are
+# summarized, and a PR is opened anyway.
 
 name: Update benchmarks
 
@@ -32,15 +34,28 @@ jobs:
           pip install "pyyaml>=6.0.2" "pytest>=8.3.0"
 
       - name: Test benchmark parsers
+        id: parsers
         run: pytest -q tests/test_update_benchmarks.py
 
-      - name: Refresh benchmarks
+      - name: Refresh benchmarks and discover models
         id: refresh
+        if: success()
+        continue-on-error: true
         run: |
           mkdir -p logs
+          set +e
           python scripts/update_benchmarks.py \
             --summary logs/benchmark_update_summary.md \
             -v
+          code=$?
+          if [ ! -f logs/benchmark_update_summary.md ]; then
+            {
+              echo "# Benchmark update summary"
+              echo ""
+              echo "Refresh exited ${code} before writing a summary."
+              echo "Opening a PR anyway so the skipped month is visible."
+            } > logs/benchmark_update_summary.md
+          fi
           {
             echo "SUMMARY<<SUMMARY_EOF"
             cat logs/benchmark_update_summary.md
@@ -49,18 +64,26 @@ jobs:
 
       - name: Month stamp
         id: stamp
+        if: steps.parsers.outcome == 'success' && !cancelled()
         run: echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
 
       - name: Create pull request
+        if: steps.parsers.outcome == 'success' && !cancelled()
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: monthly benchmark refresh (${{ steps.stamp.outputs.month }})"
+          commit-message: "chore: monthly benchmark and model refresh (${{ steps.stamp.outputs.month }})"
           branch: chore/benchmark-refresh-${{ steps.stamp.outputs.month }}
           delete-branch: true
-          title: "chore: monthly benchmark refresh (${{ steps.stamp.outputs.month }})"
+          title: "chore: monthly benchmark and model refresh (${{ steps.stamp.outputs.month }})"
           body: |
-            Automated monthly refresh of `config/benchmarks.yaml` from public leaderboard sources (best-effort; no provider API keys).
+            Automated monthly refresh of catalog **scores** and **latest public model IDs** (best-effort; no provider API keys).
+
+            If a source is down, this PR still opens: `snapshot_date` is bumped and skipped sources are listed below. DeepSWE/SWE numbers are never invented — new models without public scores are added as `auto_select: false` passthrough.
+
+            Merge this PR so the next deploy picks up updated floors/scores for `auto`. `GET /ready` exposes `benchmarks_snapshot_date`.
+
+            **Repo setting required:** Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**. Without that, the scrape still runs and pushes a branch, but PR creation fails (open the PR manually from the branch).
 
             ## Summary
             ${{ steps.refresh.outputs.SUMMARY }}
@@ -68,3 +91,4 @@ jobs:
             See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) and [docs/internal/CI.md](docs/internal/CI.md).
           add-paths: |
             config/benchmarks.yaml
+            config/models.yaml

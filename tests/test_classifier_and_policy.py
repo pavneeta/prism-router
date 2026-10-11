@@ -322,6 +322,7 @@ def test_policy_code_requires_strong_coding_scores():
     assert decision.selected_model == "minimax/minimax-m3"
     assert decision.min_accuracy == 0.65
     assert "zai/glm-5.2" not in decision.eligible_models
+    assert "zai/glm-5.3" not in decision.eligible_models
     assert "deepseek/deepseek-v4-pro" in decision.eligible_models
     # Together defaults remain passthrough-only until live validation is complete.
     assert "moonshot/kimi-k3" not in decision.eligible_models

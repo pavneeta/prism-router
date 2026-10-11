@@ -17,6 +17,7 @@ Default mappings:
 | --- | --- |
 | `deepseek/deepseek-v4-pro` | `deepseek-ai/DeepSeek-V4-Pro-0813` |
 | `zai/glm-5.2` | `zai-org/GLM-5.2` |
+| `zai/glm-5.3` | `zai-org/GLM-5.3` |
 | `moonshot/kimi-k3` | `moonshotai/Kimi-K3` |
 | `minimax/minimax-m3` | `MiniMaxAI/MiniMax-M3` |
 
@@ -24,10 +25,11 @@ Fireworks remains supported through explicit aliases (`fireworks/deepseek-v4-pro
 
 Only deployments with completed live validation are eligible for `auto` routing.
 DeepSeek V4 Pro and MiniMax M3 are currently validated for `auto` routing.
-GLM 5.2 and Kimi K3 remain explicit passthrough choices because their
-reasoning-first response format did not consistently expose scorable final
-content. Together prompt caching is reported as unsupported until
-provider-side cache behavior is verified.
+GLM 5.2, **GLM 5.3**, and Kimi K3 remain explicit passthrough choices
+(`auto_select: false`). GLM 5.3 has no public DeepSWE/SWE row yet — it is
+listed so operators can call the latest Together GLM without inventing scores.
+Together prompt caching is reported as unsupported until provider-side cache
+behavior is verified.
 
 ## Smoke (passthrough)
 

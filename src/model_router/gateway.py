@@ -614,6 +614,7 @@ async def ready() -> JSONResponse:
                     "status": "not_ready",
                     "errors": errors,
                     "viable_deployments": viable,
+                    "benchmarks_snapshot_date": benches.snapshot_date,
                 },
             )
         cache = get_prompt_cache()
@@ -640,6 +641,7 @@ async def ready() -> JSONResponse:
                     "local_response_cache_enabled": policy.local_response_cache_enabled,
                     "shared_local_cache_enabled": policy.shared_local_cache_enabled,
                 },
+                "benchmarks_snapshot_date": benches.snapshot_date,
                 "dry_run": settings.model_router_dry_run,
                 "mirror_mode": settings.model_router_mirror_mode,
                 "session_store": backend,

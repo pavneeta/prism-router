@@ -102,7 +102,7 @@ model-router --mirror-mode --mirror-judge
 | `GET /v1/router/metrics/usage` | In-process token usage by session / model / provider |
 | `POST /v1/router/feedback` | Pass/fail outcome; updates a fail-soft task×model EWMA nudge |
 | `GET /health` | Liveness |
-| `GET /ready` | Readiness (config load) |
+| `GET /ready` | Readiness (config load). Includes `benchmarks_snapshot_date` so operators can confirm auto is using the latest merged catalog. |
 
 Use model `model-router/auto` or `auto`. Responses include a `model_router` block with classification and the selected model.
 

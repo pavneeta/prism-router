@@ -41,6 +41,11 @@ deployments:
     enabled: true
     auto_select: false
 
+  - id: zai/glm-5.3
+    litellm_model: together_ai/zai-org/GLM-5.3
+    enabled: true
+    auto_select: false
+
   - id: deepseek/deepseek-v4-pro
     litellm_model: together_ai/deepseek-ai/DeepSeek-V4-Pro-0813
     enabled: true

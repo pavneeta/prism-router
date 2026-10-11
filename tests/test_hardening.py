@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -40,6 +42,7 @@ def test_ready(client: TestClient):
     assert body["config"]["policy"] is True
     assert body["config"]["benchmarks"] > 0
     assert body["session_store"] == "in_memory"
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", body["benchmarks_snapshot_date"] or "")
 
 
 def test_openai_error_shape_on_not_found(client: TestClient):
