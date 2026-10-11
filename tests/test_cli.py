@@ -90,3 +90,34 @@ def test_cli_init_opencode(tmp_path: Path, capsys, monkeypatch):
     assert "opencode.json" in out
     assert (tmp_path / "opencode.json").exists()
     assert init_harness("opencode", tmp_path).name == "opencode.json"
+
+
+def test_cli_ui_status_flag(capsys, monkeypatch):
+    monkeypatch.setattr(
+        "model_router.ui.fetch_json",
+        lambda url, timeout=0.6: None,
+    )
+    assert cli_main(["ui", "--status"]) == 0
+    out = capsys.readouterr().out
+    assert "gateway:" in out
+    assert "down" in out
+    assert "model-router" in out
+
+
+def test_cli_ui_why_flag(capsys):
+    assert cli_main(["ui", "--why", "Please summarize this article into key points."]) == 0
+    assert "summarization" in capsys.readouterr().out
+
+
+def test_cli_bare_still_serves(monkeypatch):
+    called = {}
+
+    def fake_serve(argv):
+        called["argv"] = argv
+        return 0
+
+    monkeypatch.setattr("model_router.cli._serve", fake_serve)
+    assert cli_main([]) == 0
+    assert called["argv"] == []
+    assert cli_main(["--dry-run"]) == 0
+    assert called["argv"] == ["--dry-run"]

@@ -51,11 +51,18 @@ model-router           # local example: http://127.0.0.1:4000
 model-router why "Write a Python function that merges two lists."
 # alias: prism why "..."   or   python -m model_router.why "..."
 
+# Interactive local getting-started CLI (does not start the gateway)
+model-router ui
+model-router ui --status
+model-router ui --why "Write a Python function that merges two lists."
+
 # Write harness presets into the current project
 model-router init opencode   # opencode.json
 model-router init cursor     # .cursor/prism-router.md paste note
 model-router init hermes     # hermes-prism.snippet.yaml
 ```
+
+`model-router` with no subcommand still starts the gateway. `model-router ui` is a terminal REPL (`status` / `why` / `send` / `setup` / `quit`). It reads local `/health` when a gateway is already up; otherwise it prints in-process settings and how to run `model-router` in another terminal. Pass `--start` only when you want this command to spawn a throwaway local gateway for the session.
 
 ---
 
