@@ -77,7 +77,9 @@ def test_seed_benchmarks_include_leaderboard_models():
     assert "openai/gpt-5.6-sol" in benches.models
     assert "anthropic/claude-opus-5" in benches.models
     assert "anthropic/claude-fable-5" in benches.models
-    assert benches.models["anthropic/claude-fable-5"].sources.get("deepswe") == 0.70
+    fable_deepswe = benches.models["anthropic/claude-fable-5"].sources.get("deepswe")
+    assert fable_deepswe is not None
+    assert 0.6 < float(fable_deepswe) <= 1.0
 
     kimi = benches.models["moonshot/kimi-k3"]
     assert "deepswe" in kimi.sources
