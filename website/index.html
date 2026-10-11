@@ -172,7 +172,7 @@
           <p class="section-eyebrow"><span class="num tnum">02</span> · Drop-in</p>
           <h2 class="section-h" id="harness-h">Point your harness at <code class="inline-code">auto</code>.</h2>
           <p class="section-lede">
-            Self-host the gateway, then point any OpenAI-compatible client at <strong>your</strong> <code>/v1</code> — <code>https://&lt;your-prism-host&gt;/v1</code> or <code>OPENAI_API_BASE</code> — with model id <code>auto</code>. Provider keys stay on the gateway. <code>http://127.0.0.1:4000/v1</code> is only the local example after <code>model-router</code> is running. Use <code>model-router ui</code> (terminal CLI, not a web UI), <code>why</code>, and <code>init</code> to get started.
+            Self-host the gateway, then point any OpenAI-compatible client at <strong>your</strong> <code>/v1</code> — <code>https://&lt;your-prism-host&gt;/v1</code> or <code>OPENAI_API_BASE</code> — with model id <code>auto</code>. Provider keys stay on the gateway. <code>http://127.0.0.1:4000/v1</code> is only the local example after <code>model-router</code> is running. Use <code>model-router init</code> to start a local gateway and walk through setup, then <code>ui</code> and <code>why</code> as needed.
           </p>
         </header>
 
@@ -230,8 +230,8 @@
             <p class="section-eyebrow"><span class="num tnum">03</span> · Quick start</p>
             <h2 class="section-h" id="start-h">Self-host, then point at your <code class="inline-code">/v1</code>.</h2>
             <p class="section-lede">
-              Install, then run the gateway (local <code>model-router</code> or your container).
-              <code>model-router ui</code> is a terminal getting-started CLI (not a web <code>/ui</code>).
+              Install, then run <code>model-router init</code> (background gateway + setup wizard)
+              or your container. <code>model-router ui</code> is a terminal REPL (not a web <code>/ui</code>).
               Point any OpenAI-compatible client at
               <code class="inline-code">https://&lt;your-prism-host&gt;/v1</code>
               with model <code class="inline-code">auto</code>.
@@ -256,8 +256,9 @@
                 <span class="code-panel__chip tnum">200 OK</span>
               </div>
               <pre><code><span class="c"># pip install -e ".[dev]"</span>
-<span class="c"># model-router              # gateway</span>
-<span class="c"># model-router ui           # terminal getting-started</span>
+<span class="c"># model-router init         # background gateway + setup</span>
+<span class="c"># model-router stop         # stop the background gateway</span>
+<span class="c"># model-router ui           # terminal REPL</span>
 <span class="c"># model-router why "..."    # explain a route</span>
 <span class="c"># model-router init cursor  # Cursor / OpenCode / Hermes presets</span>
 <span class="c"># curl → $OPENAI_API_BASE/chat/completions</span>

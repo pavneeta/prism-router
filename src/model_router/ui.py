@@ -181,9 +181,10 @@ def collect_status(
     hint = None
     if not gateway_up:
         hint = (
-            "Gateway is not running. Start it in another terminal:\n"
+            "Gateway is not running. Start it with:\n"
             "\n"
-            "  model-router\n"
+            "  model-router init     # background + setup wizard\n"
+            "  model-router serve    # foreground\n"
         )
     return StatusReport(
         gateway_up=gateway_up,
@@ -225,15 +226,19 @@ def format_setup(listen_url: str | None = None) -> str:
             f'  export OPENAI_API_BASE="{local_v1}"',
             f'  # self-hosted: export OPENAI_API_BASE="{PLACEHOLDER_BASE}"',
             "",
-            "Write harness presets (does not start the gateway):",
+            "Local setup (background gateway + wizard):",
+            "",
+            "  model-router init",
+            "",
+            "Write harness presets without the wizard:",
             "",
             "  model-router init opencode",
             "  model-router init cursor",
             "  model-router init hermes",
             "",
-            "Start the gateway in another terminal, then send traffic:",
+            "Foreground gateway (same as bare `model-router`):",
             "",
-            "  model-router",
+            "  model-router serve",
             f"  # local example: {LOCAL_BASE}",
         ]
     )
