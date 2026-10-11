@@ -46,6 +46,15 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env   # add provider keys — never commit .env
 model-router           # local example: http://127.0.0.1:4000
+
+# Explain classification + selected model (no daemon required)
+model-router why "Write a Python function that merges two lists."
+# alias: prism why "..."   or   python -m model_router.why "..."
+
+# Write harness presets into the current project
+model-router init opencode   # opencode.json
+model-router init cursor     # .cursor/prism-router.md paste note
+model-router init hermes     # hermes-prism.snippet.yaml
 ```
 
 ---
@@ -91,7 +100,7 @@ model-router --mirror-mode --mirror-judge
 | `POST /v1/router/explain` | Classification + selection without calling a model |
 | `GET /v1/router/sessions/{id}` | Per-session telemetry rollup (tokens, $, cache hits) |
 | `GET /v1/router/metrics/usage` | In-process token usage by session / model / provider |
-| `POST /v1/router/feedback` | Pass/fail outcome for offline benchmark loops (JSONL) |
+| `POST /v1/router/feedback` | Pass/fail outcome; updates a fail-soft task×model EWMA nudge |
 | `GET /health` | Liveness |
 | `GET /ready` | Readiness (config load) |
 
@@ -129,7 +138,17 @@ When client auth or public mode is enabled, this global endpoint requires
 
 ### Outcome feedback
 
-`POST /v1/router/feedback` appends `{session_id, outcome: pass|fail, task_hint?, notes?}` to `MODEL_ROUTER_FEEDBACK_PATH` (default `logs/feedback.jsonl`). No online learning yet — intended for future benchmark loops.
+`POST /v1/router/feedback` appends `{session_id, outcome: pass|fail, task_hint?, selected_model?, notes?}` to `MODEL_ROUTER_FEEDBACK_PATH` (default `logs/feedback.jsonl`). Missing `task_hint` / `selected_model` are filled from the session's last turn when available.
+
+The same events feed an in-memory EWMA of **task × model pass rate**. That EWMA is a **soft cost nudge** after public intelligence floors — it never replaces floors in `policy.yaml`. Fail-soft: missing data is a no-op.
+
+### Why a prompt routed that way
+
+```bash
+model-router why "From the text extract JSON with keys name and port only: ..."
+```
+
+Prints task, difficulty (`easy`/`hard`), confidence, selected model, estimated $, and reason. Same policy as the gateway (`require_credentials=False` so it works offline). `POST /v1/router/explain` is the HTTP equivalent when a server is already running.
 
 ### Streaming
 
@@ -165,10 +184,14 @@ Works for both **auto** (`auto` / `model-router/auto`) and **passthrough** (expl
 | File | Role |
 | --- | --- |
 | [`config/models.yaml`](../config/models.yaml) | Enable deployments / LiteLLM model ids |
-| [`config/policy.yaml`](../config/policy.yaml) | Intelligence floors, cache knobs, `fireworks_hide_thinking` |
+| [`config/policy.yaml`](../config/policy.yaml) | Intelligence floors, `hard_accuracy_bump` (hard codegen/debug/tools only), cache knobs, `fireworks_hide_thinking` |
 | [`config/benchmarks.yaml`](../config/benchmarks.yaml) | Cost + public benchmark sources |
 
 Restart the gateway after YAML edits.
+
+Easy coding / debug / tool turns keep the public floors (cheap MiniMax/DeepSeek remain eligible). **Hard** turns of those types add `hard_accuracy_bump` (default `0.05`). Chat, extract, summary, and creative never get the bump.
+
+Optional LLM second-pass classify is off by default (`MODEL_ROUTER_LLM_CLASSIFY=false`). When enabled, it only runs if heuristic confidence is below `0.7`, uses a tight timeout, and falls back to the heuristic on any failure. No extra model download is required.
 
 ### Fireworks thinking / CoT
 

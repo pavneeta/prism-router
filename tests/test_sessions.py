@@ -24,6 +24,25 @@ def test_session_allows_confident_drift():
     assert "session_task_drift" in merged.signals
 
 
+def test_session_holds_below_tight_drift_threshold():
+    prior = Classification("code_generation", 0.8, ["code_generation_language"], difficulty="easy")
+    turn = Classification("general_chat", 0.79, ["default_chat"])
+    merged = apply_session_classification(turn, prior=prior)
+    assert merged.task_type == "code_generation"
+    assert "session_task_hold" in merged.signals
+
+
+def test_session_confirm_promotes_difficulty():
+    prior = Classification("code_generation", 0.8, ["code"], difficulty="easy")
+    from model_router.sessions import SessionStore
+
+    store = SessionStore(ttl_seconds=600)
+    store.set_task("s1", prior)
+    turn = Classification("code_generation", 0.85, ["code"], difficulty="hard")
+    merged = apply_session_classification(turn, prior=store.get_task("s1"))
+    assert merged.difficulty == "hard"
+
+
 def test_session_rollup_accumulates():
     store = SessionStore(ttl_seconds=600, rollup_path=None)
     store.record_event(

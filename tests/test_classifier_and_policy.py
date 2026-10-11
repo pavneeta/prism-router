@@ -1,6 +1,18 @@
+import json
+from pathlib import Path
+
 from model_router.benchmarks import derive_task_accuracy, normalize_aa_index
 from model_router.classifier import classify_messages
-from model_router.config import load_benchmarks, load_models, load_policy
+from model_router.config import (
+    BenchmarksConfig,
+    Deployment,
+    ModelBenchmark,
+    ModelsConfig,
+    PolicyConfig,
+    load_benchmarks,
+    load_models,
+    load_policy,
+)
 from model_router.litellm_backend import apply_provider_cache_hints
 from model_router.policy import SelectionPolicy, estimate_input_tokens
 from model_router.prompt_cache import PromptCacheLayer, SessionAffinity, get_prompt_cache
@@ -50,6 +62,178 @@ def test_classify_tools_plus_debug_stays_code_review():
     )
     assert result.task_type == "code_review_debug"
     assert "tools_present" in result.signals
+
+
+def test_classify_extract_json_not_chat_or_math():
+    result = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "From the text extract JSON with keys name and port only:\n\n"
+                    "Service api-gateway listens on port 8080 in namespace edge."
+                ),
+            }
+        ]
+    )
+    assert result.task_type == "extraction_qa"
+    assert "extraction_language" in result.signals
+
+
+def test_classify_extract_how_many_number_only_not_math():
+    result = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Incident started 2026-07-28T14:02:00Z and ended "
+                    "2026-07-28T14:31:00Z. How many minutes did it last? Number only."
+                ),
+            }
+        ]
+    )
+    assert result.task_type == "extraction_qa"
+
+
+def test_classify_extract_according_to_yes_no():
+    result = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "According to: 'fireworks_hide_thinking defaults to true in "
+                    "policy.yaml'. Does Prism hide Fireworks thinking by default? "
+                    "Answer yes or no."
+                ),
+            }
+        ]
+    )
+    assert result.task_type == "extraction_qa"
+
+
+def test_classify_creative_blurb_not_chat():
+    result = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Write a playful 4-sentence product blurb for an "
+                    "intelligence-aware model router without using the words "
+                    "'synergy' or 'revolutionary'."
+                ),
+            }
+        ]
+    )
+    assert result.task_type == "creative_writing"
+
+
+def test_classify_creative_warning_label():
+    result = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Write a stern two-sentence warning label for flipping models "
+                    "mid-session and destroying the prompt cache."
+                ),
+            }
+        ]
+    )
+    assert result.task_type == "creative_writing"
+
+
+def test_classify_k8s_ops_is_tool_use():
+    result = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Investigate CrashLoopBackOff on pod payments-7d9f in namespace prod."
+                ),
+            }
+        ]
+    )
+    assert result.task_type == "tool_use_agent"
+    assert "k8s_ops" in result.signals
+
+
+def test_difficulty_easy_for_simple_codegen():
+    result = classify_messages(
+        [{"role": "user", "content": "Write a Python function that merges two sorted lists."}]
+    )
+    assert result.task_type == "code_generation"
+    assert result.difficulty == "easy"
+
+
+def test_difficulty_hard_for_lru_and_async():
+    lru = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": (
+                    "Implement a Python class LRUCache with O(1) average get/put."
+                ),
+            }
+        ]
+    )
+    assert lru.task_type == "code_generation"
+    assert lru.difficulty == "hard"
+    dbg = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": "Debug this async/await race condition in a multi-threaded cache.",
+            }
+        ]
+    )
+    assert dbg.task_type == "code_review_debug"
+    assert dbg.difficulty == "hard"
+
+
+def test_difficulty_hard_for_multi_tool_k8s():
+    result = classify_messages(
+        [
+            {
+                "role": "user",
+                "content": "Use tools to diagnose ingress traffic failing in ns ecommerce.",
+            }
+        ],
+        tools=[
+            {"type": "function", "function": {"name": "kubectl_get"}},
+            {"type": "function", "function": {"name": "kubectl_logs"}},
+            {"type": "function", "function": {"name": "kubectl_describe"}},
+        ],
+    )
+    assert result.task_type == "tool_use_agent"
+    assert result.difficulty == "hard"
+
+
+def test_multi_turn_uses_last_user_and_prior_task_signal():
+    result = classify_messages(
+        [
+            {"role": "user", "content": "Write a Python function that merges two lists."},
+            {"role": "assistant", "content": "def merge(a, b): ..."},
+            {"role": "user", "content": "Add type hints."},
+        ],
+        prior_task="code_generation",
+    )
+    assert "multi_turn_last_user" in result.signals
+    assert "prior_task:code_generation" in result.signals
+
+
+def test_stress_scenarios_expect_task():
+    path = Path("benchmarks/scenarios/v1/scenarios.jsonl")
+    rows = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    misses = []
+    for row in rows:
+        got = classify_messages(row["messages"], tools=row.get("tools"))
+        if got.task_type != row["expect_task"]:
+            misses.append((row["id"], row["expect_task"], got.task_type, got.signals))
+    assert misses == []
 
 
 def test_derive_accuracy_from_public_sources():
@@ -136,6 +320,7 @@ def test_policy_code_requires_strong_coding_scores():
     )
     # Live-validated Together MiniMax clears the floor and is cheapest.
     assert decision.selected_model == "minimax/minimax-m3"
+    assert decision.min_accuracy == 0.65
     assert "zai/glm-5.2" not in decision.eligible_models
     assert "deepseek/deepseek-v4-pro" in decision.eligible_models
     # Together defaults remain passthrough-only until live validation is complete.
@@ -158,7 +343,57 @@ def test_policy_tool_use_prefers_terminal_bench_eligible():
     )
     # Live-validated MiniMax tool-use score clears the floor at lowest cost.
     assert decision.selected_accuracy >= 0.70
+    assert decision.min_accuracy == 0.70
     assert decision.selected_model == "minimax/minimax-m3"
+
+
+def test_hard_codegen_floor_excludes_near_miss_keeps_easy_cheap():
+    policy_cfg = PolicyConfig(
+        default_min_accuracy=0.0,
+        min_accuracy_by_task={"code_generation": 0.65},
+        hard_accuracy_bump=0.05,
+        hard_floor_tasks=["code_generation"],
+        frontier_model="strong",
+        safe_fallback_model="cheap",
+        provider_health_enabled=False,
+    )
+    benches = BenchmarksConfig(
+        models={
+            "cheap": ModelBenchmark(
+                input_cost_per_m=0.1,
+                output_cost_per_m=0.1,
+                accuracy={"code_generation": 0.67},
+            ),
+            "strong": ModelBenchmark(
+                input_cost_per_m=2.0,
+                output_cost_per_m=2.0,
+                accuracy={"code_generation": 0.90},
+            ),
+        }
+    )
+    models = ModelsConfig(
+        deployments=[
+            Deployment(id="cheap", litellm_model="openai/cheap"),
+            Deployment(id="strong", litellm_model="openai/strong"),
+        ]
+    )
+    policy = SelectionPolicy(policy=policy_cfg, benchmarks=benches, models=models)
+    easy = policy.select(
+        task_type="code_generation",
+        classification_confidence=0.9,
+        prompt_text="Write a Python hello world.",
+        difficulty="easy",
+    )
+    hard = policy.select(
+        task_type="code_generation",
+        classification_confidence=0.9,
+        prompt_text="Implement an O(1) LRU cache.",
+        difficulty="hard",
+    )
+    assert easy.selected_model == "cheap"
+    assert easy.min_accuracy == 0.65
+    assert hard.selected_model == "strong"
+    assert hard.min_accuracy == 0.70
 
 
 def test_session_affinity_preserves_model():

@@ -29,7 +29,7 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 
 | Capability | What you get |
 | --- | --- |
-| Task-aware routing | Heuristic classifier → intelligence floor → min effective $ |
+| Task-aware routing | Heuristic classifier + `easy`/`hard` → intelligence floor → min effective $ |
 | Benchmark seed | DeepSWE / SWE-bench / Terminal-Bench / AA / Arena ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)) |
 | Cache-aware | Session affinity (`X-Session-Id`) and provider cache hints; local exact caching is opt-in |
 | Drop-in API | OpenAI `POST /v1/chat/completions` (+ streaming) and Anthropic `POST /v1/messages` |
@@ -55,6 +55,12 @@ model-router           # local example: http://127.0.0.1:4000
 
 # Dry-run (routing only, no provider spend)
 # MODEL_ROUTER_DRY_RUN=true model-router
+
+# Explain a route without starting the gateway
+model-router why "Write a Python function that merges two lists."
+
+# Write harness presets (placeholder host + local 127.0.0.1 example)
+model-router init opencode
 ```
 
 ```bash

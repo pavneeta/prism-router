@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     model_router_admin_api_key: str = ""
     model_router_stream_idle_timeout_seconds: float = 30.0
     model_router_stream_total_timeout_seconds: float = 300.0
+    # Optional LLM second-pass classify when heuristic confidence < 0.7.
+    # Default off — heuristic second pass still runs. No model download required.
+    model_router_llm_classify: bool = False
+    model_router_llm_classify_model: str = "openai/gpt-4o-mini"
+    model_router_llm_classify_timeout: float = 2.0
 
     @property
     def config_dir(self) -> Path:
@@ -87,9 +92,21 @@ class PolicyConfig(BaseModel):
     shared_local_cache_enabled: bool = False
     # Widen sticky margin when session shows high affinity preserve ratio (0 = off)
     observed_sticky_margin_boost: float = 0.1
+    # Slight intelligence-floor bump for hard codegen / debug / tools only.
+    hard_accuracy_bump: float = 0.05
+    hard_floor_tasks: list[str] = Field(
+        default_factory=lambda: [
+            "code_generation",
+            "code_review_debug",
+            "tool_use_agent",
+        ]
+    )
 
-    def min_accuracy(self, task_type: str) -> float:
-        return self.min_accuracy_by_task.get(task_type, self.default_min_accuracy)
+    def min_accuracy(self, task_type: str, difficulty: str = "easy") -> float:
+        base = self.min_accuracy_by_task.get(task_type, self.default_min_accuracy)
+        if difficulty == "hard" and task_type in self.hard_floor_tasks:
+            return min(1.0, round(base + self.hard_accuracy_bump, 4))
+        return base
 
 
 class ModelBenchmark(BaseModel):

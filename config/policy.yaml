@@ -52,3 +52,11 @@ provider_health_penalty: 1.5
 provider_health_enabled: true
 shared_local_cache_enabled: false
 observed_sticky_margin_boost: 0.1
+
+# Difficulty-aware floors: easy codegen/debug/tools stay cheap (MiniMax/DeepSeek).
+# Hard turns get a slight bump so weaker models drop out; public floors stay.
+hard_accuracy_bump: 0.05
+hard_floor_tasks:
+  - code_generation
+  - code_review_debug
+  - tool_use_agent
