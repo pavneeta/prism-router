@@ -35,6 +35,27 @@ Deploy your own host with Docker / **[RAILWAY.md](RAILWAY.md)** (or any containe
 
 ---
 
+## Install the CLI
+
+`model-router` and `prism` ship on the [v0.3.0 GitHub Release](https://github.com/pavneeta/prism-router/releases/tag/v0.3.0) (wheel + sdist). There is no PyPI package yet.
+
+```bash
+pip install https://github.com/pavneeta/prism-router/releases/download/v0.3.0/model_router-0.3.0-py3-none-any.whl
+# or: pip install "git+https://github.com/pavneeta/prism-router.git@v0.3.0"
+```
+
+The GHCR image (`ghcr.io/pavneeta/prism-router:v0.3.0`) installs the same package and runs `model-router`.
+
+```bash
+model-router              # start the gateway
+model-router ui           # terminal getting-started CLI (not a web /ui)
+model-router ui --status  # gateway / local settings
+model-router ui --why "Write a Python function that merges two lists."
+# REPL commands: status / why / send / setup / quit
+model-router why "..."    # explain a route (no daemon)
+model-router init cursor  # also: opencode, hermes
+```
+
 ## Run locally
 
 Clone the repo, add provider keys, and run the gateway on your machine. Then use the **local example** base above.

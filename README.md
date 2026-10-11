@@ -46,7 +46,26 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 
 ## Quick start
 
-### Run locally
+### Install the CLI
+
+`model-router` and `prism` ship on the [GitHub Release](https://github.com/pavneeta/prism-router/releases/tag/v0.3.0) (wheel + sdist). There is no PyPI package yet.
+
+```bash
+pip install https://github.com/pavneeta/prism-router/releases/download/v0.3.0/model_router-0.3.0-py3-none-any.whl
+# or: pip install "git+https://github.com/pavneeta/prism-router.git@v0.3.0"
+# container: docker pull ghcr.io/pavneeta/prism-router:v0.3.0   # runs model-router
+```
+
+```bash
+model-router              # gateway (local example: http://127.0.0.1:4000)
+model-router ui           # terminal getting-started (not a web /ui)
+model-router ui --status
+model-router ui --why "Write a Python function that merges two lists."
+model-router why "Write a Python function that merges two lists."
+model-router init cursor  # also: opencode, hermes
+```
+
+### Run from a clone
 
 ```bash
 git clone https://github.com/pavneeta/prism-router.git
@@ -66,6 +85,8 @@ model-router why "Write a Python function that merges two lists."
 
 # Interactive local getting-started CLI (does not start the gateway)
 model-router ui
+model-router ui --status
+model-router ui --why "Write a Python function that merges two lists."
 
 # Write harness presets (placeholder host + local 127.0.0.1 example)
 model-router init opencode
