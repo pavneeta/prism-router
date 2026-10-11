@@ -34,13 +34,23 @@ class SessionRollup:
     frontier_cost_usd: float = 0.0
     cost_delta_vs_frontier_usd: float = 0.0
     cache_hits: int = 0
+    routing_turns: int = 0
+    affinity_preserves: int = 0
     estimated_cache_savings_usd: float = 0.0
     task_types: dict[str, int] = field(default_factory=dict)
     selected_models: dict[str, int] = field(default_factory=dict)
 
+    def sticky_ratio(self) -> float | None:
+        if self.routing_turns <= 0:
+            return None
+        return self.affinity_preserves / self.routing_turns
+
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["wall_time_s"] = max(0.0, self.updated_at - self.started_at)
+        ratio = self.sticky_ratio()
+        if ratio is not None:
+            d["observed_sticky_ratio"] = ratio
         return d
 
 
@@ -138,6 +148,29 @@ class SessionStore:
     def get_rollup(self, session_id: str) -> SessionRollup | None:
         with self._lock:
             return self._rollups.get(session_id)
+
+    def observed_sticky_ratio(self, session_id: str | None) -> float | None:
+        if not session_id:
+            return None
+        with self._lock:
+            rollup = self._rollups.get(session_id)
+            if rollup is None:
+                return None
+            return rollup.sticky_ratio()
+
+    def record_routing_turn(self, session_id: str | None, *, affinity_preserve: bool) -> None:
+        if not session_id:
+            return
+        now = time.time()
+        with self._lock:
+            rollup = self._rollups.get(session_id)
+            if rollup is None:
+                rollup = SessionRollup(session_id=session_id, started_at=now, updated_at=now)
+                self._rollups[session_id] = rollup
+            rollup.updated_at = now
+            rollup.routing_turns += 1
+            if affinity_preserve:
+                rollup.affinity_preserves += 1
 
     def _persist(self, rollup: SessionRollup) -> None:
         if self.rollup_path is None:

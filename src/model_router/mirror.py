@@ -64,13 +64,17 @@ def shadow_select(
     """Select the auto model without re-entering gateway `_route` (no session writes)."""
     policy_cfg = load_policy()
     cache = get_prompt_cache()
+    from model_router.sessions import get_session_store
+
     affinity = cache.get_affinity(session_id) if policy_cfg.prompt_cache_enabled else None
+    sticky_ratio = get_session_store().observed_sticky_ratio(session_id)
     return get_selection_policy().select(
         task_type=classification.task_type,
         classification_confidence=classification.confidence,
         prompt_text=prompt_text,
         session_affinity=affinity,
         likely_prefix_reuse=likely_prefix_reuse,
+        observed_sticky_ratio=sticky_ratio,
     )
 
 

@@ -43,3 +43,10 @@ prefer_caching_models_above_prefix_tokens: 1024
 # (thinking.type=disabled only — Fireworks rejects combining with reasoning_effort).
 # Set false to allow CoT.
 fireworks_hide_thinking: true
+
+# Soft selection biases (defaults off or minimal)
+latency_penalty_usd_per_ms: 0.0
+provider_health_penalty: 1.5
+provider_health_enabled: true
+shared_local_cache_enabled: false
+observed_sticky_margin_boost: 0.1

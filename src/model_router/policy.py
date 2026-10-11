@@ -10,6 +10,7 @@ from model_router.config import (
     PolicyConfig,
 )
 from model_router.prompt_cache import SessionAffinity
+from model_router.provider_health import ProviderHealthTracker, get_provider_health
 
 
 @dataclass(frozen=True)
@@ -78,11 +79,14 @@ class SelectionPolicy:
         estimated_output_tokens: int | None = None,
         session_affinity: SessionAffinity | None = None,
         likely_prefix_reuse: bool = False,
+        observed_sticky_ratio: float | None = None,
+        provider_health: ProviderHealthTracker | None = None,
     ) -> RoutingDecision:
         out_tokens = estimated_output_tokens or self.policy.default_estimated_output_tokens
         in_tokens = estimate_input_tokens(prompt_text)
         min_acc = self.policy.min_accuracy(task_type)
         sticky_id = session_affinity.model_id if session_affinity else None
+        health = provider_health or get_provider_health()
 
         if classification_confidence < self.policy.min_classification_confidence:
             return self._decision_for_forced(
@@ -134,6 +138,12 @@ class SelectionPolicy:
                 output_tokens=out_tokens,
                 cached_tokens=cached_tokens,
             )
+            cost = self._effective_cost(
+                cost,
+                bench=bench,
+                litellm_model=deployment.litellm_model,
+                health=health,
+            )
             eligible.append((model_id, acc, cost, cached_tokens, bench))
 
         if not eligible:
@@ -169,9 +179,8 @@ class SelectionPolicy:
                 default=None,
             )
             sticky_cost = sticky_row[2]
-            if cold_best is None or sticky_cost <= cold_best[2] * (
-                1.0 + self.policy.cache_switch_savings_margin
-            ):
+            margin = self._affinity_margin(observed_sticky_ratio)
+            if cold_best is None or sticky_cost <= cold_best[2] * (1.0 + margin):
                 return self._build_decision(
                     sticky_row,
                     task_type=task_type,
@@ -215,6 +224,35 @@ class SelectionPolicy:
             cache_layer=cache_layer,
             sticky_model=sticky_id,
         )
+
+    def _affinity_margin(self, observed_sticky_ratio: float | None) -> float:
+        margin = self.policy.cache_switch_savings_margin
+        if (
+            observed_sticky_ratio is not None
+            and self.policy.observed_sticky_margin_boost > 0
+            and observed_sticky_ratio > 0
+        ):
+            margin *= 1.0 + self.policy.observed_sticky_margin_boost * min(
+                1.0, observed_sticky_ratio
+            )
+        return margin
+
+    def _effective_cost(
+        self,
+        base_cost: float,
+        *,
+        bench: ModelBenchmark,
+        litellm_model: str,
+        health: ProviderHealthTracker,
+    ) -> float:
+        cost = base_cost
+        if self.policy.provider_health_enabled:
+            err = health.error_rate(litellm_model)
+            cost *= 1.0 + self.policy.provider_health_penalty * err
+        lat_ms = bench.p50_latency_ms
+        if lat_ms is not None and self.policy.latency_penalty_usd_per_ms > 0:
+            cost += self.policy.latency_penalty_usd_per_ms * float(lat_ms)
+        return cost
 
     def _frontier_cost(self, in_tokens: int, out_tokens: int) -> float:
         bench = self.benchmarks.models.get(self.policy.frontier_model)
