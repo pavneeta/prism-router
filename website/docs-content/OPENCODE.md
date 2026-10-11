@@ -41,7 +41,16 @@ Confirm: `opencode --version`
 
 ## Project config (recommended)
 
-This repository ships [`opencode.json`](../opencode.json) at the project root as a **local example** (`http://127.0.0.1:4000/v1` after `model-router` is up). OpenCode loads it when you start OpenCode **from that directory**. For a deployed gateway, change `baseURL` to `https://<your-prism-host>/v1`.
+From any project directory:
+
+```bash
+model-router init opencode
+# alias: prism init opencode
+```
+
+That writes (or merges) `opencode.json` with placeholder `https://<your-prism-host>/v1`, model `auto`, and `X-Session-Id`. For the local example after `model-router` is up, set `baseURL` to `http://127.0.0.1:4000/v1`.
+
+This repository also ships [`opencode.json`](../opencode.json) at the project root as a **local example**. OpenCode loads it when you start OpenCode **from that directory**. For a deployed gateway, change `baseURL` to `https://<your-prism-host>/v1`.
 
 | Setting | Value |
 | --- | --- |
@@ -167,7 +176,7 @@ Expect `content-type: text/event-stream`, `data:` chunks, and a final `data: [DO
 
 - Keep a **stable** `X-Session-Id` per OpenCode workspace/session so affinity preserves provider prompt caches.  
 - Prefer `temperature: 0` for cacheable retries.  
-- Use `/v1/router/explain` while tuning prompts and floors.  
+- Use `model-router why "…"` or `/v1/router/explain` while tuning prompts and floors.  
 
 ## Troubleshooting
 

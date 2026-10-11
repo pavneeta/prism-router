@@ -12,12 +12,17 @@ from typing import Any
 from model_router.classifier import Classification
 
 
+def _harder(a: str, b: str) -> str:
+    return "hard" if "hard" in (a, b) else "easy"
+
+
 @dataclass
 class SessionTaskState:
     task_type: str
     confidence: float
     updated_at: float
     turns: int = 1
+    difficulty: str = "easy"
 
 
 @dataclass
@@ -39,6 +44,8 @@ class SessionRollup:
     estimated_cache_savings_usd: float = 0.0
     task_types: dict[str, int] = field(default_factory=dict)
     selected_models: dict[str, int] = field(default_factory=dict)
+    last_task_type: str | None = None
+    last_selected_model: str | None = None
 
     def sticky_ratio(self) -> float | None:
         if self.routing_turns <= 0:
@@ -85,6 +92,7 @@ class SessionStore:
             prev = self._tasks.get(session_id)
             if prev and prev.task_type == classification.task_type:
                 prev.confidence = max(prev.confidence, classification.confidence)
+                prev.difficulty = _harder(prev.difficulty, classification.difficulty)
                 prev.updated_at = now
                 prev.turns += 1
             else:
@@ -93,6 +101,7 @@ class SessionStore:
                     confidence=classification.confidence,
                     updated_at=now,
                     turns=(prev.turns + 1) if prev else 1,
+                    difficulty=classification.difficulty,
                 )
 
     def record_event(
@@ -142,6 +151,8 @@ class SessionStore:
             rollup.selected_models[selected_model] = (
                 rollup.selected_models.get(selected_model, 0) + 1
             )
+            rollup.last_task_type = task_type
+            rollup.last_selected_model = selected_model
             self._persist(rollup)
             return rollup
 
@@ -195,7 +206,7 @@ def apply_session_classification(
     turn: Classification,
     *,
     prior: SessionTaskState | None,
-    drift_confidence: float = 0.75,
+    drift_confidence: float = 0.80,
 ) -> Classification:
     """Stick to prior session task unless the new turn is confident and different."""
     if prior is None:
@@ -207,7 +218,12 @@ def apply_session_classification(
     # Strong new signal → allow drift
     if turn.task_type != prior.task_type and turn.confidence >= drift_confidence:
         signals.append("session_task_drift")
-        return Classification(turn.task_type, turn.confidence, signals)
+        return Classification(
+            turn.task_type,
+            turn.confidence,
+            signals,
+            difficulty=turn.difficulty,
+        )
 
     # Otherwise keep session task, blend confidence upward slightly
     if turn.task_type == prior.task_type:
@@ -216,6 +232,7 @@ def apply_session_classification(
             prior.task_type,
             max(prior.confidence, turn.confidence),
             signals,
+            difficulty=_harder(prior.difficulty, turn.difficulty),
         )
 
     # Weak disagreement → keep prior
@@ -224,4 +241,5 @@ def apply_session_classification(
         prior.task_type,
         max(0.55, min(prior.confidence, 0.85)),
         signals,
+        difficulty=prior.difficulty,
     )

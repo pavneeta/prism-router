@@ -4,6 +4,8 @@ Point [Nous Hermes](https://hermes-agent.nousresearch.com/) at **your** Prism Ro
 
 Self-host the gateway first, then set `base_url` to `https://<your-prism-host>/v1` (or `$OPENAI_API_BASE`). `http://127.0.0.1:4000/v1` is only the local example after `model-router` is running.
 
+Generate a project snippet with `model-router init hermes` (`hermes-prism.snippet.yaml`), then merge it into `~/.hermes/config.yaml` (back up first).
+
 ## Config (`~/.hermes/config.yaml`)
 
 ```yaml

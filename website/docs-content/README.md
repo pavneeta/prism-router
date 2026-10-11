@@ -6,7 +6,7 @@ User / operator guides (also rendered on the marketing site `/docs`):
 
 | Doc | Contents |
 | --- | --- |
-| [USAGE.md](USAGE.md) | Local install, API, sessions, streaming |
+| [USAGE.md](USAGE.md) | Local install, API, `why` / `init`, sessions, streaming |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common errors + Fireworks CoT hide settings |
 | [SECURITY.md](SECURITY.md) | Key rotation |
 | [TOGETHER.md](TOGETHER.md) | Together.ai setup and default open-weight mappings |

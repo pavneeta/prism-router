@@ -10,7 +10,7 @@ Engineering tracker (not synced to the public docs site).
 | Done | Latency bias in selection (`latency_penalty_usd_per_ms`) | Default `0` (off) |
 | Done | Provider health EWMA deprioritization | In-process; `/ready` snapshot |
 | Done | Observed sticky ratio → affinity margin | Session rollups |
-| Done | Outcome feedback API (`POST /v1/router/feedback`) | JSONL only |
+| Done | Outcome feedback API (`POST /v1/router/feedback`) | JSONL + task×model EWMA cost nudge |
 | Done | OpenAI-compatible streaming | PR #4 |
 | Done | Client auth + OSS prep | PR #6 |
 | In progress | Multi-replica session **task** memory | Still in-memory per replica |

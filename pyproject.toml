@@ -46,7 +46,8 @@ Repository = "https://github.com/pavneeta/prism-router"
 Issues = "https://github.com/pavneeta/prism-router/issues"
 
 [project.scripts]
-model-router = "model_router.gateway:main"
+model-router = "model_router.cli:main"
+prism = "model_router.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/model_router"]

@@ -73,6 +73,26 @@ HARNESS_PROMPTS: list[PromptCase] = [
         content="Solve this leetcode-style problem step by step: prove the complexity of merge sort.",
         expect_task="reasoning_math",
     ),
+    PromptCase(
+        name="extract_json",
+        content="From the text extract JSON with keys name and port only:\n\nService api-gateway listens on port 8080.",
+        expect_task="extraction_qa",
+    ),
+    PromptCase(
+        name="extract_factoid",
+        content="Context: Prism Router's default listen port is 4000.\nQuestion: What port does Prism listen on by default? Reply with the number only.",
+        expect_task="extraction_qa",
+    ),
+    PromptCase(
+        name="creative_haiku",
+        content="Write a haiku about routing LLM traffic through a prism. Three lines only.",
+        expect_task="creative_writing",
+    ),
+    PromptCase(
+        name="creative_blurb",
+        content="Write a playful 4-sentence product blurb for an intelligence-aware model router without using the words 'synergy' or 'revolutionary'.",
+        expect_task="creative_writing",
+    ),
 ]
 
 
@@ -103,12 +123,14 @@ def run_eval() -> list[dict]:
             classification_confidence=classification.confidence,
             prompt_text=case.content,
             likely_prefix_reuse=bool(case.tools),
+            difficulty=classification.difficulty,
         )
         rows.append(
             {
                 "name": case.name,
                 "expect_task": case.expect_task,
                 "task_type": classification.task_type,
+                "difficulty": classification.difficulty,
                 "confidence": classification.confidence,
                 "signals": classification.signals,
                 "selected_model": decision.selected_model,

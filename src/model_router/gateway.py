@@ -35,7 +35,7 @@ from model_router.litellm_backend import (
     provider_credential_available,
     provider_type,
 )
-from model_router.feedback import FeedbackEvent, get_feedback_logger
+from model_router.feedback import FeedbackEvent, record_feedback, get_feedback_accuracy
 from model_router.mirror import schedule_mirror_eval, should_mirror
 from model_router.provider_health import get_provider_health
 from model_router.policy import RoutingDecision, estimate_input_tokens
@@ -340,11 +340,12 @@ def _route(
     policy_cfg = load_policy()
     cache = get_prompt_cache()
     sessions = get_session_store()
+    prior = sessions.get_task(session_id)
     turn = classify_messages(
         [m.model_dump() for m in messages],
         tools=tools,
+        prior_task=prior.task_type if prior else None,
     )
-    prior = sessions.get_task(session_id)
     classification = apply_session_classification(turn, prior=prior)
     sessions.set_task(session_id, classification)
 
@@ -358,6 +359,8 @@ def _route(
             session_affinity=affinity,
             likely_prefix_reuse=_likely_prefix_reuse(messages, tools),
             observed_sticky_ratio=sticky_ratio,
+            difficulty=classification.difficulty,
+            feedback_accuracy=get_feedback_accuracy(),
         )
         sessions.record_routing_turn(
             session_id,
@@ -398,6 +401,7 @@ def _classification_from_cached(payload: dict[str, Any]) -> Classification:
         task_type=str(c.get("task_type", "general_chat")),
         confidence=float(c.get("confidence", 0.0)),
         signals=list(c.get("signals") or ["local_cache_hit"]),
+        difficulty=str(c.get("difficulty") or "easy"),
     )
 
 
@@ -493,6 +497,7 @@ def _router_meta(
             "task_type": classification.task_type,
             "confidence": classification.confidence,
             "signals": classification.signals,
+            "difficulty": classification.difficulty,
         },
         "decision": _decision_payload(decision) if decision else None,
         "cache": {"hit": cache_hit, "layer": cache_layer},
@@ -669,6 +674,7 @@ async def session_rollup(session_id: str, request: Request) -> dict[str, Any]:
                 "task_type": task.task_type,
                 "confidence": task.confidence,
                 "turns": task.turns,
+                "difficulty": task.difficulty,
             }
             if task
             else None
@@ -715,26 +721,41 @@ class RouterFeedbackRequest(BaseModel):
     outcome: str  # pass | fail
     task_hint: str | None = None
     notes: str | None = None
+    selected_model: str | None = None
+    model: str | None = None
 
 
 @app.post("/v1/router/feedback")
 async def router_feedback(body: RouterFeedbackRequest, request: Request) -> dict[str, Any]:
-    """Append pass/fail outcome for offline benchmark loops (no online learning)."""
+    """Append pass/fail and update the task×model pass-rate EWMA (fail-soft)."""
     outcome = body.outcome.strip().lower()
     if outcome not in {"pass", "fail"}:
         raise HTTPException(status_code=400, detail="outcome must be pass or fail")
     if not body.session_id.strip():
         raise HTTPException(status_code=400, detail="session_id required")
+    internal_sid = (
+        f"{getattr(request.state, 'principal', 'anonymous')}:{body.session_id.strip()}"
+    )
+    rollup = get_session_store().get_rollup(internal_sid)
+    task = get_session_store().get_task(internal_sid)
+    selected_model = (
+        (body.selected_model or body.model or "").strip()
+        or (rollup.last_selected_model if rollup else None)
+    )
+    task_hint = (
+        (body.task_hint or "").strip()
+        or (task.task_type if task else None)
+        or (rollup.last_task_type if rollup else None)
+    )
     event = FeedbackEvent(
         ts=now_ts(),
-        session_id=(
-            f"{getattr(request.state, 'principal', 'anonymous')}:{body.session_id.strip()}"
-        ),
+        session_id=internal_sid,
         outcome=outcome,
-        task_hint=(body.task_hint or "").strip() or None,
+        task_hint=task_hint,
         notes=(body.notes or "").strip() or None,
+        selected_model=selected_model,
     )
-    get_feedback_logger().append(event)
+    record_feedback(event)
     return {"status": "recorded", "event": event.to_dict()}
 
 
@@ -854,6 +875,7 @@ async def explain(
             "task_type": classification.task_type,
             "confidence": classification.confidence,
             "signals": classification.signals,
+            "difficulty": classification.difficulty,
         },
         "decision": _decision_payload(decision) if decision else None,
         "litellm_model": litellm_model,

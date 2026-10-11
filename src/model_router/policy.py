@@ -9,6 +9,7 @@ from model_router.config import (
     ModelsConfig,
     PolicyConfig,
 )
+from model_router.feedback import FeedbackAccuracy
 from model_router.prompt_cache import SessionAffinity
 from model_router.provider_health import ProviderHealthTracker, get_provider_health
 from model_router.litellm_backend import provider_credential_available
@@ -105,10 +106,12 @@ class SelectionPolicy:
         likely_prefix_reuse: bool = False,
         observed_sticky_ratio: float | None = None,
         provider_health: ProviderHealthTracker | None = None,
+        difficulty: str = "easy",
+        feedback_accuracy: FeedbackAccuracy | None = None,
     ) -> RoutingDecision:
         out_tokens = estimated_output_tokens or self.policy.default_estimated_output_tokens
         in_tokens = estimate_input_tokens(prompt_text)
-        min_acc = self.policy.min_accuracy(task_type)
+        min_acc = self.policy.min_accuracy(task_type, difficulty=difficulty)
         sticky_id = session_affinity.model_id if session_affinity else None
         health = provider_health or get_provider_health()
 
@@ -173,6 +176,9 @@ class SelectionPolicy:
                 litellm_model=deployment.litellm_model,
                 health=health,
             )
+            # Soft task×model pass-rate nudge — does not change public floors.
+            if feedback_accuracy is not None:
+                cost *= feedback_accuracy.cost_multiplier(task_type, model_id)
             eligible.append((model_id, acc, cost, cached_tokens, bench))
 
         if not eligible:
