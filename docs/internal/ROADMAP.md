@@ -20,7 +20,7 @@ Engineering tracker (not synced to the public docs site).
 | Deferred | Semantic / fuzzy local prompt cache | [#10](https://github.com/pavneeta/prism-router/issues/10) |
 | Deferred | Learned tiny classifier | [#11](https://github.com/pavneeta/prism-router/issues/11) |
 | Deferred | Bandits / IPS / full adaptive routing | [#12](https://github.com/pavneeta/prism-router/issues/12) |
-| Deferred | Git history scrub | [#13](https://github.com/pavneeta/prism-router/issues/13) |
+| Done | Git history scrub tooling + tree hygiene | [#13](https://github.com/pavneeta/prism-router/issues/13) — `scripts/git_history_scrub.py`. Rewriting published `main` still needs an explicit force-push. |
 | Deferred | Edge CDN rate limits | [#14](https://github.com/pavneeta/prism-router/issues/14) |
 | Wontfix (MVP) | Anthropic `/v1/messages` streaming | Use `/v1/chat/completions?stream=true` |
 
