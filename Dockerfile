@@ -24,7 +24,7 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 COPY config ./config
 
-RUN pip install --no-cache-dir . \
+RUN pip install --no-cache-dir '.[redis]' \
     && chown -R app:app /app
 
 USER app
