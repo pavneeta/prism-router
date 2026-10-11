@@ -57,12 +57,14 @@ pip install https://github.com/pavneeta/prism-router/releases/download/v0.3.0/mo
 ```
 
 ```bash
-model-router              # gateway (local example: http://127.0.0.1:4000)
-model-router ui           # terminal getting-started (not a web /ui)
-model-router ui --status
-model-router ui --why "Write a Python function that merges two lists."
+model-router init         # background gateway + setup wizard (local 127.0.0.1:4000)
+model-router init --yes --client opencode
+model-router status       # pid / url / log under ~/.prism-router/
+model-router stop         # stop the background gateway
+model-router serve        # foreground gateway (same as bare `model-router`)
+model-router ui           # terminal REPL (not a web /ui)
 model-router why "Write a Python function that merges two lists."
-model-router init cursor  # also: opencode, hermes
+model-router init cursor  # non-interactive harness preset (also: opencode, hermes)
 ```
 
 ### Run from a clone
@@ -75,20 +77,20 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 # Add provider keys to .env (see below)
-model-router           # local example: http://127.0.0.1:4000
+model-router init      # starts a background gateway, then a setup wizard
 
 # Dry-run (routing only, no provider spend)
-# MODEL_ROUTER_DRY_RUN=true model-router
+# MODEL_ROUTER_DRY_RUN=true model-router serve
 
 # Explain a route without starting the gateway
 model-router why "Write a Python function that merges two lists."
 
-# Interactive local getting-started CLI (does not start the gateway)
+# Terminal REPL (status / why / send / setup) — not a web /ui
 model-router ui
 model-router ui --status
 model-router ui --why "Write a Python function that merges two lists."
 
-# Write harness presets (placeholder host + local 127.0.0.1 example)
+# Non-interactive harness presets (scripts; no daemon)
 model-router init opencode
 model-router init cursor
 ```

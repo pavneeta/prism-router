@@ -47,13 +47,17 @@ pip install https://github.com/pavneeta/prism-router/releases/download/v0.3.0/mo
 The GHCR image (`ghcr.io/pavneeta/prism-router:v0.3.0`) installs the same package and runs `model-router`.
 
 ```bash
-model-router              # start the gateway
-model-router ui           # terminal getting-started CLI (not a web /ui)
+model-router init         # background gateway + setup wizard
+model-router init --yes --client opencode
+model-router status       # pid / url / log under ~/.prism-router/
+model-router stop         # stop the background gateway
+model-router serve        # foreground gateway (same as bare `model-router`)
+model-router ui           # terminal REPL (not a web /ui)
 model-router ui --status  # gateway / local settings
 model-router ui --why "Write a Python function that merges two lists."
 # REPL commands: status / why / send / setup / quit
-model-router why "..."    # explain a route (no daemon)
-model-router init cursor  # also: opencode, hermes
+model-router why "..."    # explain a route (no server required)
+model-router init cursor  # non-interactive preset (also: opencode, hermes)
 ```
 
 ## Run locally
@@ -66,24 +70,35 @@ cd prism-router
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env   # add provider keys — never commit .env
-model-router           # local example: http://127.0.0.1:4000
+model-router init      # background gateway on 127.0.0.1:4000 + setup wizard
 
-# Explain classification + selected model (no daemon required)
+# Explain classification + selected model (no server required)
 model-router why "Write a Python function that merges two lists."
 # alias: prism why "..."   or   python -m model_router.why "..."
 
-# Interactive local getting-started CLI (does not start the gateway)
+# Terminal REPL (does not start the gateway unless --start)
 model-router ui
 model-router ui --status
 model-router ui --why "Write a Python function that merges two lists."
 
-# Write harness presets into the current project
+# Non-interactive harness presets (no daemon; safe for scripts)
 model-router init opencode   # opencode.json
 model-router init cursor     # .cursor/prism-router.md paste note
 model-router init hermes     # hermes-prism.snippet.yaml
 ```
 
-`model-router` with no subcommand still starts the gateway. `model-router ui` is a terminal REPL (`status` / `why` / `send` / `setup` / `quit`). It reads local `/health` when a gateway is already up; otherwise it prints in-process settings and how to run `model-router` in another terminal. Pass `--start` only when you want this command to spawn a throwaway local gateway for the session.
+`model-router init` (also `prism init`) is the local getting-started command: it starts a **background** gateway on `127.0.0.1:4000` unless one is already healthy, then runs a numbered setup wizard:
+
+1. Provider keys present/missing (Together, OpenAI, Anthropic, Fireworks — never printed)
+2. Listen host/port
+3. Client preset (OpenCode / Cursor / Hermes / skip)
+4. `OPENAI_API_BASE` copy-paste
+5. `/health` and `/ready`
+6. Routing preview (`why` on a sample prompt)
+
+PID and logs live under `~/.prism-router/` (override with `PRISM_ROUTER_HOME`). Use `init --no-start` for the wizard only, `init --yes` to accept defaults, and `init --yes --client opencode` in CI. `init --foreground` runs setup and then the gateway in this terminal.
+
+`model-router` with no subcommand still starts the **foreground** gateway (same as `model-router serve` / `up`). That default is unchanged so existing invocations keep working. `model-router ui` is a terminal REPL (`status` / `why` / `send` / `setup` / `quit`). It reads local `/health` when a gateway is already up; otherwise it prints in-process settings and how to run `model-router init` or `serve`. Pass `--start` only when you want this command to spawn a throwaway local gateway for the session.
 
 ---
 
@@ -92,7 +107,7 @@ model-router init hermes     # hermes-prism.snippet.yaml
 Dry-run (routing only, no provider spend):
 
 ```bash
-MODEL_ROUTER_DRY_RUN=true model-router
+MODEL_ROUTER_DRY_RUN=true model-router serve
 # or
 model-router --dry-run
 ```

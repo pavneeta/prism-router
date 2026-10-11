@@ -2,7 +2,7 @@
 
 Point [Cursor](https://cursor.com) at **your** Prism Router `/v1` so agent turns go through intelligence-aware, cache-aware routing. Cursor talks to any OpenAI-compatible base URL.
 
-`model-router ui` is a **terminal** getting-started CLI (not a web `/ui`). Use it locally to inspect status, explain a route, or send a smoke request.
+`model-router init` starts a local background gateway and a setup wizard. `model-router ui` is a **terminal** REPL (not a web `/ui`) for status, route explain, or a smoke request.
 
 ## Prerequisites
 
