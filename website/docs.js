@@ -7,7 +7,7 @@
 
   const REPO = "pavneeta/prism-router";
   const BRANCH = "main";
-  /** Bundled copy (private repos cannot hit raw GitHub from the browser). */
+  /** Bundled copy used first; jsDelivr / raw GitHub are public fallbacks. */
   const LOCAL_BASE = "./docs-content/";
   const CDN_BASE = `https://cdn.jsdelivr.net/gh/${REPO}@${BRANCH}/docs/`;
   const RAW_BASE = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/docs/`;
@@ -19,8 +19,10 @@
     { id: "USAGE", title: "Usage", file: "USAGE.md" },
     { id: "BENCHMARKS", title: "Benchmarks", file: "BENCHMARKS.md" },
     { id: "OPENCODE", title: "OpenCode", file: "OPENCODE.md" },
+    { id: "CURSOR", title: "Cursor", file: "CURSOR.md" },
     { id: "HERMES", title: "Hermes", file: "HERMES.md" },
     { id: "HOLMESGPT", title: "HolmesGPT", file: "HOLMESGPT.md" },
+    { id: "TOGETHER", title: "Together.ai", file: "TOGETHER.md" },
     { id: "TROUBLESHOOTING", title: "Troubleshooting", file: "TROUBLESHOOTING.md" },
     { id: "SECURITY", title: "Security", file: "SECURITY.md" },
     { id: "RAILWAY", title: "Railway deploy", file: "RAILWAY.md" },

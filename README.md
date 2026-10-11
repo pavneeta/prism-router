@@ -1,5 +1,10 @@
 # Prism Router (Model-Router)
 
+[![CI](https://github.com/pavneeta/prism-router/actions/workflows/ci.yml/badge.svg)](https://github.com/pavneeta/prism-router/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/pavneeta/prism-router)](https://github.com/pavneeta/prism-router/releases)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-prism--router-0a1418)](https://prism-router-ten.vercel.app/docs)
+
 **Intelligence-aware, cache-aware inference routing** for agent harnesses and high-volume multi-task workloads.
 
 Prism Router sits in front of your model providers (via [LiteLLM](https://github.com/BerriAI/litellm)). It classifies each request, picks the cheapest model that still clears an **intelligence floor** for that task, and keeps multi-turn sessions sticky so **prompt caches** stay warm.
@@ -34,7 +39,7 @@ Prism Router uses **public benchmarks** (DeepSWE, SWE-bench, Terminal-Bench, Art
 | Cache-aware | Session affinity (`X-Session-Id`) and provider cache hints; local exact caching is opt-in |
 | Drop-in API | OpenAI `POST /v1/chat/completions` (+ streaming) and Anthropic `POST /v1/messages` |
 | Providers | Together.ai (default open-weight backend), Fireworks, OpenAI, Anthropic, and anything LiteLLM supports |
-| Harness-friendly | Works with OpenCode, Hermes, HolmesGPT, and any OpenAI-compatible client |
+| Harness-friendly | Works with OpenCode, Cursor, Hermes, HolmesGPT, and any OpenAI-compatible client |
 | Sessions | `X-Session-Id` task memory + `GET /v1/router/sessions/{id}` rollups |
 
 ---
@@ -64,6 +69,7 @@ model-router ui
 
 # Write harness presets (placeholder host + local 127.0.0.1 example)
 model-router init opencode
+model-router init cursor
 ```
 
 ```bash
@@ -95,6 +101,7 @@ Self-host the gateway (local CLI, Docker, or [Railway](docs/RAILWAY.md)), then p
 | **[Deploy (Railway)](docs/RAILWAY.md)** | Container deploy, env vars, replicas |
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Common errors and fixes |
 | **[OpenCode](docs/OPENCODE.md)** | Point OpenCode at Prism Router |
+| **[Cursor](docs/CURSOR.md)** | Point Cursor at Prism Router (`model-router init cursor`) |
 | **[Hermes](docs/HERMES.md)** | Point Nous Hermes Agent at Prism Router |
 | **[HolmesGPT](docs/HOLMESGPT.md)** | Point HolmesGPT (CNCF SRE agent) at Prism Router |
 | [Together.ai](docs/TOGETHER.md) | Default open-weight mappings and setup |
@@ -137,6 +144,8 @@ Enable deployments in [`config/models.yaml`](config/models.yaml). Intelligence f
 Self-host Prism, then point each client at **your** `/v1` (`https://<your-prism-host>/v1` or `$OPENAI_API_BASE`). Local snippets below assume `model-router` is already running.
 
 **OpenCode** — set `baseURL` to `https://<your-prism-host>/v1` with model `model-router/auto`. The shipped [`opencode.json`](opencode.json) is a **local example** (`http://127.0.0.1:4000/v1`) for after `model-router` is up. See [docs/OPENCODE.md](docs/OPENCODE.md).
+
+**Cursor** — `model-router init cursor` writes a paste-ready note. Point Cursor’s OpenAI-compatible base URL at **your** `/v1` (`https://<your-prism-host>/v1`, or `http://127.0.0.1:4000/v1` after the local gateway is up) with model `auto`. See [docs/CURSOR.md](docs/CURSOR.md).
 
 **Hermes** — in `~/.hermes/config.yaml`:
 

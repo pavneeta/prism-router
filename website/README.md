@@ -26,7 +26,8 @@ python3 -m http.server 5173
 
 `/docs` (`docs.html` + `docs.js`) renders **user/operator** markdown from the repo’s `docs/` folder (not `docs/internal/`).
 
-Because the GitHub repo is private, markdown is **copied into** `website/docs-content/` by `sync-docs.sh` (also the Vercel `buildCommand`). Edit user docs under `docs/`, run `./website/sync-docs.sh` (or deploy), and the site stays in sync. Engineering docs stay under `docs/internal/` (GitHub only). If the repo is made public later, the viewer also falls back to jsDelivr / raw GitHub.
+Markdown is **copied into** `website/docs-content/` by `sync-docs.sh` (also the Vercel `buildCommand`). Edit user docs under `docs/`, run `./website/sync-docs.sh` (or deploy), and the site stays in sync. Engineering docs stay under `docs/internal/` (GitHub only). The public docs viewer also falls back to jsDelivr / raw GitHub on `main`.
+
 ## Deploy (Vercel)
 
 Production: [https://prism-router-ten.vercel.app](https://prism-router-ten.vercel.app)
